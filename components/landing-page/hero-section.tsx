@@ -4,6 +4,7 @@ import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { BackgroundBeams } from "./background-beams"
 import { HoverBorderGradient } from "./hover-border-gradient"
+import Link from "next/link"
 
 export function HeroSection() {
   return (
@@ -44,21 +45,32 @@ export function HeroSection() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.6 }}
         >
-          <HoverBorderGradient>
-            <Button size="lg" className="bg-white text-black hover:bg-gray-200 px-8 py-4 text-lg font-semibold">
-              Get Started
-            </Button>
-          </HoverBorderGradient>
+          <Link href="/role-selection">
+            <HoverBorderGradient>
+              <Button size="lg" className="bg-white text-black hover:bg-gray-200 px-8 py-4 text-lg font-semibold">
+                Get Started
+              </Button>
+            </HoverBorderGradient>
+          </Link>
 
-          <HoverBorderGradient>
-            <Button
-              variant="outline"
-              size="lg"
-              className="border-gray-600 text-white hover:bg-gray-900 px-8 py-4 text-lg font-semibold bg-transparent"
-            >
-              Request Demo
-            </Button>
-          </HoverBorderGradient>
+          <Button
+            size="lg"
+            className="
+              relative 
+              border border-gray-600 
+              text-white 
+              bg-transparent 
+              px-8 py-4 text-lg font-semibold 
+              rounded-xl
+              transition-all duration-300 ease-in-out 
+              hover:border-white 
+              hover:bg-white/10 
+              hover:shadow-lg 
+              hover:shadow-white/10
+            "
+          >
+            Request Demo
+          </Button>
         </motion.div>
       </div>
     </section>
