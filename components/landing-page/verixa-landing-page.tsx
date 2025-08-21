@@ -4,7 +4,8 @@ import { ProblemSection } from "./problem-section"
 import { SolutionSection } from "./solution-section"
 import { RolesSection } from "./roles-section"
 import { HowItWorksSection } from "./how-it-works-section"
-import { GlobeSection } from "./globe-section"
+import { StatsSection } from "./stats-section"
+import { FooterSection } from "./footer-section"
 
 export function VerixaLandingPage() {
   return (
@@ -14,7 +15,8 @@ export function VerixaLandingPage() {
       <SolutionSection />
       <RolesSection />
       <HowItWorksSection />
-      <GlobeSection />
+      <StatsSection />
+      <FooterSection />
     </div>
   )
 }
