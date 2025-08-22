@@ -303,13 +303,13 @@ export function PatientForm() {
       className="space-y-8"
     >
       {/* Basic Details Section */}
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div className="flex items-center space-x-3 pb-4 border-b border-gray-700">
           <User className="h-5 w-5 text-blue-400" />
           <h3 className="text-xl font-semibold text-gray-100">Basic Details</h3>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-2">
             <Label htmlFor="firstName" className="text-gray-200">First Name *</Label>
             <Input
@@ -412,13 +412,13 @@ export function PatientForm() {
       </div>
 
       {/* Contact Information Section */}
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div className="flex items-center space-x-3 pb-4 border-b border-gray-700">
           <Mail className="h-5 w-5 text-blue-400" />
           <h3 className="text-xl font-semibold text-gray-100">Contact Information</h3>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-2">
             <Label htmlFor="emailAddress" className="text-gray-200">Email Address *</Label>
             <Input
@@ -470,13 +470,13 @@ export function PatientForm() {
       </div>
 
       {/* Address Details Section */}
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div className="flex items-center space-x-3 pb-4 border-b border-gray-700">
           <MapPin className="h-5 w-5 text-blue-400" />
           <h3 className="text-xl font-semibold text-gray-100">Address Details</h3>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="md:col-span-2 space-y-2">
             <Label htmlFor="streetAddress" className="text-gray-200">Street Address *</Label>
             <Input
@@ -593,13 +593,13 @@ export function PatientForm() {
       </div>
 
       {/* Emergency Contact Section */}
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div className="flex items-center space-x-3 pb-4 border-b border-gray-700">
           <Phone className="h-5 w-5 text-blue-400" />
           <h3 className="text-xl font-semibold text-gray-100">Emergency Contact</h3>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-2">
             <Label htmlFor="emergencyContactName" className="text-gray-200">Emergency Contact Name *</Label>
             <Input
@@ -670,13 +670,13 @@ export function PatientForm() {
       </div>
 
       {/* Identity Verification Section */}
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div className="flex items-center space-x-3 pb-4 border-b border-gray-700">
           <Shield className="h-5 w-5 text-blue-400" />
           <h3 className="text-xl font-semibold text-gray-100">Identity Verification</h3>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-2">
             <Label htmlFor="governmentIdType" className="text-gray-200">Government ID Type *</Label>
             <Select value={formData.governmentIdType} onValueChange={(value) => updateFormData("governmentIdType", value)}>
@@ -733,13 +733,13 @@ export function PatientForm() {
       </div>
 
       {/* Account Security Section */}
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div className="flex items-center space-x-3 pb-4 border-b border-gray-700">
           <Shield className="h-5 w-5 text-blue-400" />
           <h3 className="text-xl font-semibold text-gray-100">Account Security</h3>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-2">
             <Label htmlFor="password" className="text-gray-200">Password *</Label>
             <Input
@@ -779,7 +779,7 @@ export function PatientForm() {
       </div>
 
       {/* Terms & Agreements Section */}
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div className="flex items-center space-x-3 pb-4 border-b border-gray-700">
           <CheckCircle className="h-5 w-5 text-blue-400" />
           <h3 className="text-xl font-semibold text-gray-100">Terms & Agreements</h3>
@@ -818,13 +818,13 @@ export function PatientForm() {
       className="space-y-8"
     >
       {/* Medical Information Section */}
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div className="flex items-center space-x-3 pb-4 border-b border-gray-700">
           <Heart className="h-5 w-5 text-blue-400" />
           <h3 className="text-xl font-semibold text-gray-100">Medical Information</h3>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-2">
             <Label htmlFor="currentInsuranceProvider" className="text-gray-200">Current Insurance Provider</Label>
             <Input
@@ -861,7 +861,7 @@ export function PatientForm() {
       </div>
 
       {/* Privacy Preferences Section */}
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div className="flex items-center space-x-3 pb-4 border-b border-gray-700">
           <Shield className="h-5 w-5 text-blue-400" />
           <h3 className="text-xl font-semibold text-gray-100">Privacy Preferences</h3>

@@ -2,8 +2,12 @@ import { IssuerForm } from "@/components/auth/issuer-form";
 
 export default function IssuerRegistrationPage() {
   return (
-    <div className="min-h-screen bg-black text-white flex items-center justify-center p-6">
-      <IssuerForm />
+    <div className="min-h-screen bg-black text-white">
+      <div className="w-full px-6 py-10">
+        <div className="mx-auto w-full max-w-4xl lg:max-w-5xl">
+          <IssuerForm />
+        </div>
+      </div>
     </div>
   );
 }

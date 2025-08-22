@@ -282,13 +282,13 @@ export function IssuerForm() {
       className="space-y-8"
     >
       {/* Organization Details Section */}
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div className="flex items-center space-x-3 pb-4 border-b border-gray-700">
           <Building2 className="h-5 w-5 text-blue-400" />
           <h3 className="text-xl font-semibold text-gray-100">Organization Details</h3>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-2">
             <Label htmlFor="organizationName" className="text-gray-200">Organization Name *</Label>
             <Input
@@ -417,13 +417,13 @@ export function IssuerForm() {
       </div>
 
       {/* Contact Information Section */}
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div className="flex items-center space-x-3 pb-4 border-b border-gray-700">
           <User className="h-5 w-5 text-blue-400" />
           <h3 className="text-xl font-semibold text-gray-100">Contact Information</h3>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-2">
             <Label htmlFor="contactPersonName" className="text-gray-200">Primary Contact Person Name *</Label>
             <Input
@@ -512,13 +512,13 @@ export function IssuerForm() {
       </div>
 
       {/* Address Details Section */}
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div className="flex items-center space-x-3 pb-4 border-b border-gray-700">
           <MapPin className="h-5 w-5 text-blue-400" />
           <h3 className="text-xl font-semibold text-gray-100">Address Details</h3>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="md:col-span-2 space-y-2">
             <Label htmlFor="streetAddress" className="text-gray-200">Street Address *</Label>
             <Input
@@ -618,13 +618,13 @@ export function IssuerForm() {
       </div>
 
       {/* Verification Documents Section */}
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div className="flex items-center space-x-3 pb-4 border-b border-gray-700">
           <FileText className="h-5 w-5 text-blue-400" />
           <h3 className="text-xl font-semibold text-gray-100">Verification Documents</h3>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {[
             { id: "medicalLicense", label: "Medical License Certificate", required: true },
             { id: "businessRegistration", label: "Business Registration Certificate", required: true },
@@ -648,13 +648,13 @@ export function IssuerForm() {
       </div>
 
       {/* Account Security Section */}
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div className="flex items-center space-x-3 pb-4 border-b border-gray-700">
           <Settings className="h-5 w-5 text-blue-400" />
           <h3 className="text-xl font-semibold text-gray-100">Account Security</h3>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-2">
             <Label htmlFor="password" className="text-gray-200">Password *</Label>
             <Input
@@ -694,7 +694,7 @@ export function IssuerForm() {
       </div>
 
       {/* Terms & Agreements Section */}
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div className="flex items-center space-x-3 pb-4 border-b border-gray-700">
           <CheckCircle className="h-5 w-5 text-blue-400" />
           <h3 className="text-xl font-semibold text-gray-100">Terms & Agreements</h3>
@@ -733,13 +733,13 @@ export function IssuerForm() {
       className="space-y-8"
     >
       {/* Report Templates Section */}
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div className="flex items-center space-x-3 pb-4 border-b border-gray-700">
           <FileText className="h-5 w-5 text-blue-400" />
           <h3 className="text-xl font-semibold text-gray-100">Report Templates</h3>
         </div>
         
-        <div className="space-y-6">
+        <div className="space-y-8">
           <div className="space-y-3">
             <Label className="text-gray-200">Upload Sample Report Templates *</Label>
             <div className="flex items-center justify-center w-full">
@@ -758,7 +758,7 @@ export function IssuerForm() {
 
           <div className="space-y-3">
             <Label className="text-gray-200">Report Types Offered *</Label>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
               {reportTypes.map(type => (
                 <div key={type} className="flex items-center space-x-2 p-2 rounded-lg bg-gray-800/30 hover:bg-gray-800/50 transition-colors">
                   <Checkbox
@@ -782,13 +782,13 @@ export function IssuerForm() {
       </div>
 
       {/* Report Formatting Section */}
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div className="flex items-center space-x-3 pb-4 border-b border-gray-700">
           <Settings className="h-5 w-5 text-blue-400" />
           <h3 className="text-xl font-semibold text-gray-100">Report Formatting</h3>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           <div className="space-y-2">
             <Label htmlFor="standardFont" className="text-gray-200">Standard Font *</Label>
             <Select value={formData.standardFont} onValueChange={(value) => updateFormData("standardFont", value)}>
@@ -850,7 +850,7 @@ export function IssuerForm() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-2">
             <Label htmlFor="headerFormat" className="text-gray-200">Header Format Description *</Label>
             <Textarea
@@ -890,13 +890,13 @@ export function IssuerForm() {
       </div>
 
       {/* Medical Value Ranges Section */}
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div className="flex items-center space-x-3 pb-4 border-b border-gray-700">
           <Settings className="h-5 w-5 text-blue-400" />
           <h3 className="text-xl font-semibold text-gray-100">Medical Value Ranges</h3>
         </div>
         
-        <div className="space-y-6">
+        <div className="space-y-8">
           <div className="space-y-2">
             <Label htmlFor="normalRanges" className="text-gray-200">Normal Ranges for Tests *</Label>
             <Textarea
@@ -915,7 +915,7 @@ export function IssuerForm() {
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-2">
               <Label htmlFor="unitsUsed" className="text-gray-200">Units Used *</Label>
               <Input

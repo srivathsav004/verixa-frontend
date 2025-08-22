@@ -300,9 +300,9 @@ export function InsuranceForm() {
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="space-y-6"
+      className="space-y-8"
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div className="space-y-2">
           <Label htmlFor="companyName">Company Name *</Label>
           <Input
@@ -408,7 +408,7 @@ export function InsuranceForm() {
           Business Information
         </h3>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-2">
             <Label htmlFor="annualPremiumCollection">Annual Premium Collection</Label>
             <Input
@@ -472,7 +472,7 @@ export function InsuranceForm() {
           Contact Information
         </h3>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-2">
             <Label htmlFor="primaryContactPerson">Primary Contact Person *</Label>
             <Input
@@ -581,7 +581,7 @@ export function InsuranceForm() {
           Address Details
         </h3>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="md:col-span-2 space-y-2">
             <Label htmlFor="headOfficeAddress">Head Office Address *</Label>
             <Input
@@ -683,7 +683,7 @@ export function InsuranceForm() {
           Legal Documents
         </h3>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
             <Label>Insurance License Certificate *</Label>
             <Button variant="outline" className="w-full border-gray-600 text-gray-300">
@@ -729,7 +729,7 @@ export function InsuranceForm() {
       <div className="border-t border-gray-700 pt-6">
         <h3 className="text-lg font-semibold mb-4">Account Security</h3>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-2">
             <Label htmlFor="password">Password *</Label>
             <Input
@@ -820,7 +820,7 @@ export function InsuranceForm() {
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="space-y-6"
+      className="space-y-8"
     >
       <div className="border-b border-gray-700 pb-6">
         <h3 className="text-lg font-semibold mb-4 flex items-center">
@@ -828,7 +828,7 @@ export function InsuranceForm() {
           Technical Integration
         </h3>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-2">
             <Label htmlFor="technicalContactPerson">Technical Contact Person *</Label>
             <Input
@@ -905,7 +905,7 @@ export function InsuranceForm() {
           Verification Preferences
         </h3>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="space-y-2">
             <Label htmlFor="autoApprovalThreshold">Auto-approval Threshold *</Label>
             <Input
