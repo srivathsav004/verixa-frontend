@@ -30,7 +30,7 @@ export function WalletConnection({ onWalletConnected, onBack, onComplete }: Wall
   const [isPolygonAmoy, setIsPolygonAmoy] = useState(false);
 
   const polygonAmoyConfig = {
-    chainId: "0x13881", // 80001 in hex
+    chainId: "0x13882", // 80002 in hex
     chainName: "Polygon Amoy Testnet",
     nativeCurrency: {
       name: "MATIC",
@@ -38,7 +38,6 @@ export function WalletConnection({ onWalletConnected, onBack, onComplete }: Wall
       decimals: 18,
     },
     rpcUrls: ["https://rpc-amoy.polygon.technology"],
-    blockExplorerUrls: ["https://www.oklink.com/amoy"],
   };
 
   const checkIfWalletIsConnected = async () => {
