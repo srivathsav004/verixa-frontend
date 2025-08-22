@@ -975,50 +975,66 @@ export function InsuranceForm() {
   );
 
   return (
-  <div className="min-h-screen bg-black text-white flex items-center justify-center p-6">
-    <Card className="w-full max-w-4xl bg-gray-900/50 border-gray-800 text-white">
-      <CardHeader>
-        <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-          Insurance Company Registration
-        </CardTitle>
-        <div className="mt-6">
-          <Stepper steps={steps} currentStep={currentStep} />
-        </div>
-      </CardHeader>
+  <div className="min-h-screen bg-gradient-to-br from-gray-950 via-black to-gray-900 text-white">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12 space-y-8 lg:space-y-12">
 
-      <CardContent className="space-y-6">
-        <AnimatePresence mode="wait">
+      {/* Header */}
+      <div className="space-y-2 text-left">
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-600 bg-clip-text text-transparent">
+          Insurance Company Registration
+        </h1>
+        <p className="text-gray-400 text-base">
+          Register your company on our blockchain-based insurance platform
+        </p>
+      </div>
+
+      {/* Stepper */}
+      <div className="w-full">
+        <Stepper steps={steps} currentStep={currentStep} className="justify-start" />
+      </div>
+
+      {/* Step Content */}
+      <div className="bg-gray-900/40 backdrop-blur-lg border border-gray-800 shadow-xl rounded-2xl w-full p-4 sm:p-6 lg:p-8">
+        <AnimatePresence mode="wait" initial={false}>
           {currentStep === 0 && renderCompanyInformation()}
           {currentStep === 1 && renderTechnicalSetup()}
           {currentStep === 2 && (
-            <WalletConnection
-              onWalletConnected={handleWalletConnected}
-              onBack={handleBack}
-              onComplete={handleComplete}
-            />
+            <motion.div
+              initial={false}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+            >
+              <WalletConnection
+                onWalletConnected={handleWalletConnected}
+                onBack={handleBack}
+                onComplete={handleComplete}
+              />
+            </motion.div>
           )}
         </AnimatePresence>
+      </div>
 
-        {currentStep < 2 && (
-          <div className="flex justify-between pt-6">
-            <Button
-              onClick={handleBack}
-              disabled={currentStep === 0}
-              variant="outline"
-              className="border-gray-600 text-gray-300 hover:bg-gray-800"
-            >
-              Back
-            </Button>
-            <Button
-              onClick={handleNext}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              {currentStep === 1 ? "Connect Wallet" : "Next"}
-            </Button>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      {/* Navigation */}
+      {currentStep < 2 && (
+        <div className="flex flex-col sm:flex-row justify-between gap-4 pt-6 border-t border-gray-800">
+          <Button
+            onClick={handleBack}
+            disabled={currentStep === 0}
+            variant="outline"
+            className="w-full sm:w-auto px-6 py-3 border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+          >
+            Back
+          </Button>
+          <Button
+            onClick={handleNext}
+            className="w-full sm:w-auto px-8 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-medium transition-all duration-200 transform hover:scale-105 shadow-lg"
+          >
+            {currentStep === 1 ? "Connect Wallet" : "Next Step"}
+          </Button>
+        </div>
+      )}
+    </div>
   </div>
 );
+
 }
