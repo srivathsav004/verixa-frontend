@@ -297,527 +297,475 @@ export function InsuranceForm() {
 
   const renderCompanyInformation = () => (
     <motion.div
-      initial={{ opacity: 0, x: 20 }}
+      initial={false}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
       className="space-y-8"
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div className="space-y-2">
-          <Label htmlFor="companyName">Company Name *</Label>
+          <Label htmlFor="companyName" className="text-gray-200">Company Name *</Label>
           <Input
             id="companyName"
             value={formData.companyName}
             onChange={(e) => updateFormData("companyName", e.target.value)}
             placeholder="e.g., ABC Insurance Co."
-            className="bg-gray-800 border-gray-700"
+            className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100 placeholder:text-gray-400"
           />
           {errors.companyName && (
-            <p className="text-red-400 text-sm">{errors.companyName}</p>
+            <p className="text-red-400 text-sm flex items-center gap-1">
+              <AlertCircle className="h-3 w-3" />
+              {errors.companyName}
+            </p>
           )}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="companyType">Company Type *</Label>
+          <Label htmlFor="companyType" className="text-gray-200">Company Type *</Label>
           <Select value={formData.companyType} onValueChange={(value) => updateFormData("companyType", value)}>
-            <SelectTrigger className="bg-gray-800 border-gray-700">
+            <SelectTrigger className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100">
               <SelectValue placeholder="Select company type" />
             </SelectTrigger>
             <SelectContent className="bg-gray-800 border-gray-700">
               {companyTypes.map(type => (
-                <SelectItem key={type} value={type}>{type}</SelectItem>
+                <SelectItem key={type} value={type} className="text-gray-100 hover:bg-gray-700">{type}</SelectItem>
               ))}
             </SelectContent>
           </Select>
           {errors.companyType && (
-            <p className="text-red-400 text-sm">{errors.companyType}</p>
+            <p className="text-red-400 text-sm flex items-center gap-1">
+              <AlertCircle className="h-3 w-3" />
+              {errors.companyType}
+            </p>
           )}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="insuranceLicenseNumber">Insurance License Number *</Label>
+          <Label htmlFor="insuranceLicenseNumber" className="text-gray-200">Insurance License Number *</Label>
           <Input
             id="insuranceLicenseNumber"
             value={formData.insuranceLicenseNumber}
             onChange={(e) => updateFormData("insuranceLicenseNumber", e.target.value)}
             placeholder="e.g., INS123456"
-            className="bg-gray-800 border-gray-700"
+            className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100 placeholder:text-gray-400"
           />
           {errors.insuranceLicenseNumber && (
-            <p className="text-red-400 text-sm">{errors.insuranceLicenseNumber}</p>
+            <p className="text-red-400 text-sm flex items-center gap-1">
+              <AlertCircle className="h-3 w-3" />
+              {errors.insuranceLicenseNumber}
+            </p>
           )}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="irdaiRegistrationNumber">IRDAI Registration Number *</Label>
+          <Label htmlFor="irdaiRegistrationNumber" className="text-gray-200">IRDAI Registration Number *</Label>
           <Input
             id="irdaiRegistrationNumber"
             value={formData.irdaiRegistrationNumber}
             onChange={(e) => updateFormData("irdaiRegistrationNumber", e.target.value)}
             placeholder="e.g., IRDAI123456"
-            className="bg-gray-800 border-gray-700"
+            className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100 placeholder:text-gray-400"
           />
           {errors.irdaiRegistrationNumber && (
-            <p className="text-red-400 text-sm">{errors.irdaiRegistrationNumber}</p>
+            <p className="text-red-400 text-sm flex items-center gap-1">
+              <AlertCircle className="h-3 w-3" />
+              {errors.irdaiRegistrationNumber}
+            </p>
           )}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="establishedYear">Established Year *</Label>
+          <Label htmlFor="establishedYear" className="text-gray-200">Established Year *</Label>
           <Input
             id="establishedYear"
             value={formData.establishedYear}
             onChange={(e) => updateFormData("establishedYear", e.target.value)}
             placeholder="e.g., 2010"
-            className="bg-gray-800 border-gray-700"
+            className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100 placeholder:text-gray-400"
           />
           {errors.establishedYear && (
-            <p className="text-red-400 text-sm">{errors.establishedYear}</p>
+            <p className="text-red-400 text-sm flex items-center gap-1">
+              <AlertCircle className="h-3 w-3" />
+              {errors.establishedYear}
+            </p>
           )}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="companyWebsite">Company Website *</Label>
+          <Label htmlFor="companyWebsite" className="text-gray-200">Company Website *</Label>
           <Input
             id="companyWebsite"
             value={formData.companyWebsite}
             onChange={(e) => updateFormData("companyWebsite", e.target.value)}
             placeholder="https://example.com"
-            className="bg-gray-800 border-gray-700"
+            className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100 placeholder:text-gray-400"
           />
           {errors.companyWebsite && (
-            <p className="text-red-400 text-sm">{errors.companyWebsite}</p>
+            <p className="text-red-400 text-sm flex items-center gap-1">
+              <AlertCircle className="h-3 w-3" />
+              {errors.companyWebsite}
+            </p>
           )}
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="companyLogo">Company Logo</Label>
-        <div className="flex items-center space-x-2">
-          <Button variant="outline" className="border-gray-600 text-gray-300">
-            <Upload className="h-4 w-4 mr-2" />
-            Upload Logo
-          </Button>
-          <span className="text-sm text-gray-400">PNG, JPG up to 5MB</span>
+      <div className="space-y-3">
+        <Label htmlFor="companyLogo" className="text-gray-200">Company Logo</Label>
+        <div className="flex items-center justify-center w-full">
+          <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-600 border-dashed rounded-lg cursor-pointer bg-gray-800/30 hover:bg-gray-800/50 transition-colors">
+            <div className="flex flex-col items-center justify-center pt-5 pb-6">
+              <Upload className="w-8 h-8 mb-3 text-gray-400" />
+              <p className="mb-2 text-sm text-gray-400">
+                <span className="font-semibold">Click to upload</span> company logo
+              </p>
+              <p className="text-xs text-gray-500">PNG, JPG up to 5MB</p>
+            </div>
+            <input type="file" className="hidden" accept="image/*" />
+          </label>
         </div>
       </div>
 
       <div className="border-t border-gray-700 pt-6">
-        <h3 className="text-lg font-semibold mb-4 flex items-center">
-          <DollarSign className="h-5 w-5 mr-2" />
-          Business Information
-        </h3>
+        <div className="flex items-center space-x-3 pb-4 border-b border-gray-700">
+          <DollarSign className="h-5 w-5 text-blue-400" />
+          <h3 className="text-xl font-semibold text-gray-100">Business Information</h3>
+        </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-2">
-            <Label htmlFor="annualPremiumCollection">Annual Premium Collection</Label>
+            <Label htmlFor="annualPremiumCollection" className="text-gray-200">Annual Premium Collection</Label>
             <Input
               id="annualPremiumCollection"
               value={formData.annualPremiumCollection}
               onChange={(e) => updateFormData("annualPremiumCollection", e.target.value)}
               placeholder="e.g., $1,000,000"
-              className="bg-gray-800 border-gray-700"
+              className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100 placeholder:text-gray-400"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="numberOfActivePolicies">Number of Active Policies</Label>
+            <Label htmlFor="numberOfActivePolicies" className="text-gray-200">Number of Active Policies</Label>
             <Input
               id="numberOfActivePolicies"
               value={formData.numberOfActivePolicies}
               onChange={(e) => updateFormData("numberOfActivePolicies", e.target.value)}
               placeholder="e.g., 10,000"
-              className="bg-gray-800 border-gray-700"
+              className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100 placeholder:text-gray-400"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="coverageAreas">Coverage Areas</Label>
+            <Label htmlFor="coverageAreas" className="text-gray-200">Coverage Areas</Label>
             <Input
               id="coverageAreas"
               value={formData.coverageAreas}
               onChange={(e) => updateFormData("coverageAreas", e.target.value)}
               placeholder="e.g., Maharashtra, Karnataka, Tamil Nadu"
-              className="bg-gray-800 border-gray-700"
+              className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100 placeholder:text-gray-400"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="specialization">Specialization</Label>
+            <Label htmlFor="specialization" className="text-gray-200">Specialization</Label>
             <Input
               id="specialization"
               value={formData.specialization}
               onChange={(e) => updateFormData("specialization", e.target.value)}
               placeholder="e.g., Individual, Corporate, Both"
-              className="bg-gray-800 border-gray-700"
+              className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100 placeholder:text-gray-400"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="claimSettlementRatio">Claim Settlement Ratio (%)</Label>
+            <Label htmlFor="claimSettlementRatio" className="text-gray-200">Claim Settlement Ratio (%)</Label>
             <Input
               id="claimSettlementRatio"
               value={formData.claimSettlementRatio}
               onChange={(e) => updateFormData("claimSettlementRatio", e.target.value)}
               placeholder="e.g., 95.5"
-              className="bg-gray-800 border-gray-700"
+              className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100 placeholder:text-gray-400"
             />
           </div>
         </div>
       </div>
 
-      <div className="border-t border-gray-700 pt-6">
-        <h3 className="text-lg font-semibold mb-4 flex items-center">
-          <User className="h-5 w-5 mr-2" />
-          Contact Information
-        </h3>
-        
+      {/* Contact Information */}
+      <div className="border-t border-gray-700 pt-6 space-y-8">
+        <div className="flex items-center space-x-3 pb-4 border-b border-gray-700">
+          <User className="h-5 w-5 text-blue-400" />
+          <h3 className="text-xl font-semibold text-gray-100">Contact Information</h3>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-2">
-            <Label htmlFor="primaryContactPerson">Primary Contact Person *</Label>
+            <Label htmlFor="primaryContactPerson" className="text-gray-200">Primary Contact Person *</Label>
             <Input
               id="primaryContactPerson"
               value={formData.primaryContactPerson}
               onChange={(e) => updateFormData("primaryContactPerson", e.target.value)}
               placeholder="e.g., John Smith"
-              className="bg-gray-800 border-gray-700"
+              className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100 placeholder:text-gray-400"
             />
             {errors.primaryContactPerson && (
-              <p className="text-red-400 text-sm">{errors.primaryContactPerson}</p>
+              <p className="text-red-400 text-sm flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                {errors.primaryContactPerson}
+              </p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="designation">Designation *</Label>
+            <Label htmlFor="designation" className="text-gray-200">Designation *</Label>
             <Select value={formData.designation} onValueChange={(value) => updateFormData("designation", value)}>
-              <SelectTrigger className="bg-gray-800 border-gray-700">
+              <SelectTrigger className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100">
                 <SelectValue placeholder="Select designation" />
               </SelectTrigger>
               <SelectContent className="bg-gray-800 border-gray-700">
                 {designations.map(designation => (
-                  <SelectItem key={designation} value={designation}>{designation}</SelectItem>
+                  <SelectItem key={designation} value={designation} className="text-gray-100 hover:bg-gray-700">{designation}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
             {errors.designation && (
-              <p className="text-red-400 text-sm">{errors.designation}</p>
+              <p className="text-red-400 text-sm flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                {errors.designation}
+              </p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="department">Department *</Label>
+            <Label htmlFor="department" className="text-gray-200">Department *</Label>
             <Select value={formData.department} onValueChange={(value) => updateFormData("department", value)}>
-              <SelectTrigger className="bg-gray-800 border-gray-700">
+              <SelectTrigger className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100">
                 <SelectValue placeholder="Select department" />
               </SelectTrigger>
               <SelectContent className="bg-gray-800 border-gray-700">
                 {departments.map(dept => (
-                  <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                  <SelectItem key={dept} value={dept} className="text-gray-100 hover:bg-gray-700">{dept}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
             {errors.department && (
-              <p className="text-red-400 text-sm">{errors.department}</p>
+              <p className="text-red-400 text-sm flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                {errors.department}
+              </p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="officialEmailAddress">Official Email Address *</Label>
+            <Label htmlFor="officialEmailAddress" className="text-gray-200">Official Email Address *</Label>
             <Input
               id="officialEmailAddress"
               type="email"
               value={formData.officialEmailAddress}
               onChange={(e) => updateFormData("officialEmailAddress", e.target.value)}
               placeholder="contact@company.com"
-              className="bg-gray-800 border-gray-700"
+              className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100 placeholder:text-gray-400"
             />
             {errors.officialEmailAddress && (
-              <p className="text-red-400 text-sm">{errors.officialEmailAddress}</p>
+              <p className="text-red-400 text-sm flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                {errors.officialEmailAddress}
+              </p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="phoneNumber">Phone Number *</Label>
+            <Label htmlFor="phoneNumber" className="text-gray-200">Phone Number *</Label>
             <Input
               id="phoneNumber"
+              type="tel"
               value={formData.phoneNumber}
               onChange={(e) => updateFormData("phoneNumber", e.target.value)}
               placeholder="+1234567890"
-              className="bg-gray-800 border-gray-700"
+              className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100 placeholder:text-gray-400"
             />
             {errors.phoneNumber && (
-              <p className="text-red-400 text-sm">{errors.phoneNumber}</p>
+              <p className="text-red-400 text-sm flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                {errors.phoneNumber}
+              </p>
             )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="claimsDepartmentEmail">Claims Department Email</Label>
-            <Input
-              id="claimsDepartmentEmail"
-              type="email"
-              value={formData.claimsDepartmentEmail}
-              onChange={(e) => updateFormData("claimsDepartmentEmail", e.target.value)}
-              placeholder="claims@company.com"
-              className="bg-gray-800 border-gray-700"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="claimsDepartmentPhone">Claims Department Phone</Label>
-            <Input
-              id="claimsDepartmentPhone"
-              value={formData.claimsDepartmentPhone}
-              onChange={(e) => updateFormData("claimsDepartmentPhone", e.target.value)}
-              placeholder="+1234567890"
-              className="bg-gray-800 border-gray-700"
-            />
           </div>
         </div>
       </div>
 
-      <div className="border-t border-gray-700 pt-6">
-        <h3 className="text-lg font-semibold mb-4 flex items-center">
-          <MapPin className="h-5 w-5 mr-2" />
-          Address Details
-        </h3>
-        
+      {/* Address Details */}
+      <div className="border-t border-gray-700 pt-6 space-y-8">
+        <div className="flex items-center space-x-3 pb-4 border-b border-gray-700">
+          <MapPin className="h-5 w-5 text-blue-400" />
+          <h3 className="text-xl font-semibold text-gray-100">Address Details</h3>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="md:col-span-2 space-y-2">
-            <Label htmlFor="headOfficeAddress">Head Office Address *</Label>
-            <Input
-              id="headOfficeAddress"
-              value={formData.headOfficeAddress}
-              onChange={(e) => updateFormData("headOfficeAddress", e.target.value)}
-              placeholder="123 Insurance Plaza"
-              className="bg-gray-800 border-gray-700"
-            />
-          </div>
-
-          <div className="md:col-span-2 space-y-2">
-            <Label htmlFor="streetAddress">Street Address *</Label>
+            <Label htmlFor="streetAddress" className="text-gray-200">Street Address *</Label>
             <Input
               id="streetAddress"
               value={formData.streetAddress}
               onChange={(e) => updateFormData("streetAddress", e.target.value)}
-              placeholder="123 Insurance Plaza, Floor 5"
-              className="bg-gray-800 border-gray-700"
+              placeholder="123 Business Street"
+              className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100 placeholder:text-gray-400"
             />
             {errors.streetAddress && (
-              <p className="text-red-400 text-sm">{errors.streetAddress}</p>
+              <p className="text-red-400 text-sm flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                {errors.streetAddress}
+              </p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="city">City *</Label>
+            <Label htmlFor="city" className="text-gray-200">City *</Label>
             <Input
               id="city"
               value={formData.city}
               onChange={(e) => updateFormData("city", e.target.value)}
               placeholder="Mumbai"
-              className="bg-gray-800 border-gray-700"
+              className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100 placeholder:text-gray-400"
             />
             {errors.city && (
-              <p className="text-red-400 text-sm">{errors.city}</p>
+              <p className="text-red-400 text-sm flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                {errors.city}
+              </p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="state">State/Province *</Label>
+            <Label htmlFor="state" className="text-gray-200">State *</Label>
             <Input
               id="state"
               value={formData.state}
               onChange={(e) => updateFormData("state", e.target.value)}
               placeholder="Maharashtra"
-              className="bg-gray-800 border-gray-700"
+              className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100 placeholder:text-gray-400"
             />
             {errors.state && (
-              <p className="text-red-400 text-sm">{errors.state}</p>
+              <p className="text-red-400 text-sm flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                {errors.state}
+              </p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="postalCode">Postal Code *</Label>
+            <Label htmlFor="postalCode" className="text-gray-200">Postal Code *</Label>
             <Input
               id="postalCode"
               value={formData.postalCode}
               onChange={(e) => updateFormData("postalCode", e.target.value)}
               placeholder="400001"
-              className="bg-gray-800 border-gray-700"
+              className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100 placeholder:text-gray-400"
             />
             {errors.postalCode && (
-              <p className="text-red-400 text-sm">{errors.postalCode}</p>
+              <p className="text-red-400 text-sm flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                {errors.postalCode}
+              </p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="country">Country *</Label>
+            <Label htmlFor="country" className="text-gray-200">Country *</Label>
             <Input
               id="country"
               value={formData.country}
               onChange={(e) => updateFormData("country", e.target.value)}
               placeholder="India"
-              className="bg-gray-800 border-gray-700"
+              className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100 placeholder:text-gray-400"
             />
             {errors.country && (
-              <p className="text-red-400 text-sm">{errors.country}</p>
+              <p className="text-red-400 text-sm flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                {errors.country}
+              </p>
             )}
           </div>
-
-          <div className="md:col-span-2 space-y-2">
-            <Label htmlFor="regionalOfficeAddresses">Regional Office Addresses</Label>
-            <Textarea
-              id="regionalOfficeAddresses"
-              value={formData.regionalOfficeAddresses}
-              onChange={(e) => updateFormData("regionalOfficeAddresses", e.target.value)}
-              placeholder="List your regional office addresses..."
-              className="bg-gray-800 border-gray-700"
-              rows={3}
-            />
-          </div>
         </div>
       </div>
 
-      <div className="border-t border-gray-700 pt-6">
-        <h3 className="text-lg font-semibold mb-4 flex items-center">
-          <FileText className="h-5 w-5 mr-2" />
-          Legal Documents
-        </h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <Label>Insurance License Certificate *</Label>
-            <Button variant="outline" className="w-full border-gray-600 text-gray-300">
-              <Upload className="h-4 w-4 mr-2" />
-              Upload PDF
-            </Button>
-          </div>
-
-          <div className="space-y-2">
-            <Label>IRDAI Registration Certificate *</Label>
-            <Button variant="outline" className="w-full border-gray-600 text-gray-300">
-              <Upload className="h-4 w-4 mr-2" />
-              Upload PDF
-            </Button>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Business Registration Document *</Label>
-            <Button variant="outline" className="w-full border-gray-600 text-gray-300">
-              <Upload className="h-4 w-4 mr-2" />
-              Upload PDF
-            </Button>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Tax Registration Certificate *</Label>
-            <Button variant="outline" className="w-full border-gray-600 text-gray-300">
-              <Upload className="h-4 w-4 mr-2" />
-              Upload PDF
-            </Button>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Audited Financial Statements *</Label>
-            <Button variant="outline" className="w-full border-gray-600 text-gray-300">
-              <Upload className="h-4 w-4 mr-2" />
-              Upload PDF
-            </Button>
-          </div>
+      {/* Account Security */}
+      <div className="border-t border-gray-700 pt-6 space-y-8">
+        <div className="flex items-center space-x-3 pb-4 border-b border-gray-700">
+          <Settings className="h-5 w-5 text-blue-400" />
+          <h3 className="text-xl font-semibold text-gray-100">Account Security</h3>
         </div>
-      </div>
 
-      <div className="border-t border-gray-700 pt-6">
-        <h3 className="text-lg font-semibold mb-4">Account Security</h3>
-        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-2">
-            <Label htmlFor="password">Password *</Label>
+            <Label htmlFor="password" className="text-gray-200">Password *</Label>
             <Input
               id="password"
               type="password"
               value={formData.password}
               onChange={(e) => updateFormData("password", e.target.value)}
-              placeholder="********"
-              className="bg-gray-800 border-gray-700"
+              placeholder="Enter secure password"
+              className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100 placeholder:text-gray-400"
             />
             {errors.password && (
-              <p className="text-red-400 text-sm">{errors.password}</p>
+              <p className="text-red-400 text-sm flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                {errors.password}
+              </p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirm Password *</Label>
+            <Label htmlFor="confirmPassword" className="text-gray-200">Confirm Password *</Label>
             <Input
               id="confirmPassword"
               type="password"
               value={formData.confirmPassword}
               onChange={(e) => updateFormData("confirmPassword", e.target.value)}
-              placeholder="********"
-              className="bg-gray-800 border-gray-700"
+              placeholder="Confirm your password"
+              className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100 placeholder:text-gray-400"
             />
             {errors.confirmPassword && (
-              <p className="text-red-400 text-sm">{errors.confirmPassword}</p>
+              <p className="text-red-400 text-sm flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                {errors.confirmPassword}
+              </p>
             )}
           </div>
         </div>
       </div>
 
-      <div className="border-t border-gray-700 pt-6">
-        <h3 className="text-lg font-semibold mb-4">Terms & Agreements</h3>
-        
-        <div className="space-y-4">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="acceptTerms"
-              checked={formData.acceptTerms}
-              onCheckedChange={(checked) => updateFormData("acceptTerms", checked)}
-            />
-            <Label htmlFor="acceptTerms">I accept the Terms of Service *</Label>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="acceptPrivacy"
-              checked={formData.acceptPrivacy}
-              onCheckedChange={(checked) => updateFormData("acceptPrivacy", checked)}
-            />
-            <Label htmlFor="acceptPrivacy">I accept the Privacy Policy *</Label>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="acceptBlockchain"
-              checked={formData.acceptBlockchain}
-              onCheckedChange={(checked) => updateFormData("acceptBlockchain", checked)}
-            />
-            <Label htmlFor="acceptBlockchain">I accept the Blockchain Terms *</Label>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="marketingConsent"
-              checked={formData.marketingConsent}
-              onCheckedChange={(checked) => updateFormData("marketingConsent", checked)}
-            />
-            <Label htmlFor="marketingConsent">I consent to receive marketing communications</Label>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="dataProcessingConsent"
-              checked={formData.dataProcessingConsent}
-              onCheckedChange={(checked) => updateFormData("dataProcessingConsent", checked)}
-            />
-            <Label htmlFor="dataProcessingConsent">I consent to data processing (GDPR compliance) *</Label>
-          </div>
+      {/* Terms & Agreements */}
+      <div className="border-t border-gray-700 pt-6 space-y-4">
+        <div className="flex items-center space-x-3 pb-4 border-b border-gray-700">
+          <CheckCircle className="h-5 w-5 text-blue-400" />
+          <h3 className="text-xl font-semibold text-gray-100">Terms & Agreements</h3>
         </div>
+
+        {[ 
+          { id: "acceptTerms", label: "I accept the Terms of Service", required: true },
+          { id: "acceptPrivacy", label: "I accept the Privacy Policy", required: true },
+          { id: "acceptBlockchain", label: "I accept the Blockchain Terms", required: true },
+          { id: "marketingConsent", label: "I consent to receive marketing communications", required: false },
+          { id: "dataProcessingConsent", label: "I consent to data processing (GDPR compliance)", required: true },
+        ].map(({ id, label, required }) => (
+          <div key={id} className="flex items-start space-x-3">
+            <Checkbox
+              id={id}
+              checked={formData[id as keyof FormData] as boolean}
+              onCheckedChange={(checked) => updateFormData(id as keyof FormData, checked)}
+              className="mt-1 border-gray-500 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+            />
+            <Label htmlFor={id} className="text-gray-200 text-sm leading-relaxed cursor-pointer">
+              {label} {required && <span className="text-red-400">*</span>}
+            </Label>
+          </div>
+        ))}
       </div>
     </motion.div>
   );
 
   const renderTechnicalSetup = () => (
     <motion.div
-      initial={{ opacity: 0, x: 20 }}
+      initial={false}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
       className="space-y-8"
@@ -830,43 +778,49 @@ export function InsuranceForm() {
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-2">
-            <Label htmlFor="technicalContactPerson">Technical Contact Person *</Label>
+            <Label htmlFor="technicalContactPerson" className="text-gray-200">Technical Contact Person *</Label>
             <Input
               id="technicalContactPerson"
               value={formData.technicalContactPerson}
               onChange={(e) => updateFormData("technicalContactPerson", e.target.value)}
               placeholder="e.g., Tech Lead"
-              className="bg-gray-800 border-gray-700"
+              className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100 placeholder:text-gray-400"
             />
             {errors.technicalContactPerson && (
-              <p className="text-red-400 text-sm">{errors.technicalContactPerson}</p>
+              <p className="text-red-400 text-sm flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                {errors.technicalContactPerson}
+              </p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="technicalEmail">Technical Email *</Label>
+            <Label htmlFor="technicalEmail" className="text-gray-200">Technical Email *</Label>
             <Input
               id="technicalEmail"
               type="email"
               value={formData.technicalEmail}
               onChange={(e) => updateFormData("technicalEmail", e.target.value)}
               placeholder="tech@company.com"
-              className="bg-gray-800 border-gray-700"
+              className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100 placeholder:text-gray-400"
             />
             {errors.technicalEmail && (
-              <p className="text-red-400 text-sm">{errors.technicalEmail}</p>
+              <p className="text-red-400 text-sm flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                {errors.technicalEmail}
+              </p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="preferredIntegrationMethod">Preferred Integration Method *</Label>
+            <Label htmlFor="preferredIntegrationMethod" className="text-gray-200">Preferred Integration Method *</Label>
             <Select value={formData.preferredIntegrationMethod} onValueChange={(value) => updateFormData("preferredIntegrationMethod", value)}>
-              <SelectTrigger className="bg-gray-800 border-gray-700">
+              <SelectTrigger className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100">
                 <SelectValue placeholder="Select integration method" />
               </SelectTrigger>
               <SelectContent className="bg-gray-800 border-gray-700">
                 {integrationMethods.map(method => (
-                  <SelectItem key={method} value={method}>{method}</SelectItem>
+                  <SelectItem key={method} value={method} className="text-gray-100 hover:bg-gray-700">{method}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -876,24 +830,24 @@ export function InsuranceForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="currentClaimsManagementSystem">Current Claims Management System</Label>
+            <Label htmlFor="currentClaimsManagementSystem" className="text-gray-200">Current Claims Management System</Label>
             <Input
               id="currentClaimsManagementSystem"
               value={formData.currentClaimsManagementSystem}
               onChange={(e) => updateFormData("currentClaimsManagementSystem", e.target.value)}
-              placeholder="e.g., Custom System v2.1"
-              className="bg-gray-800 border-gray-700"
+              placeholder="e.g., In-house / Third-party"
+              className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100 placeholder:text-gray-400"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="monthlyVerificationVolume">Monthly Verification Volume</Label>
+            <Label htmlFor="monthlyVerificationVolume" className="text-gray-200">Monthly Verification Volume</Label>
             <Input
               id="monthlyVerificationVolume"
               value={formData.monthlyVerificationVolume}
               onChange={(e) => updateFormData("monthlyVerificationVolume", e.target.value)}
-              placeholder="e.g., 1000"
-              className="bg-gray-800 border-gray-700"
+              placeholder="e.g., 5000"
+              className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100 placeholder:text-gray-400"
             />
           </div>
         </div>
@@ -907,73 +861,64 @@ export function InsuranceForm() {
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="space-y-2">
-            <Label htmlFor="autoApprovalThreshold">Auto-approval Threshold *</Label>
+            <Label htmlFor="autoApprovalThreshold" className="text-gray-200">Auto-approval Threshold (%) *</Label>
             <Input
               id="autoApprovalThreshold"
               value={formData.autoApprovalThreshold}
               onChange={(e) => updateFormData("autoApprovalThreshold", e.target.value)}
-              placeholder="e.g., 90"
-              className="bg-gray-800 border-gray-700"
+              placeholder="e.g., 80"
+              className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100 placeholder:text-gray-400"
             />
-            {errors.autoApprovalThreshold && (
-              <p className="text-red-400 text-sm">{errors.autoApprovalThreshold}</p>
-            )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="manualReviewThreshold">Manual Review Threshold *</Label>
+            <Label htmlFor="manualReviewThreshold" className="text-gray-200">Manual Review Threshold (%) *</Label>
             <Input
               id="manualReviewThreshold"
               value={formData.manualReviewThreshold}
               onChange={(e) => updateFormData("manualReviewThreshold", e.target.value)}
-              placeholder="e.g., 70-89"
-              className="bg-gray-800 border-gray-700"
+              placeholder="e.g., 50"
+              className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100 placeholder:text-gray-400"
             />
-            {errors.manualReviewThreshold && (
-              <p className="text-red-400 text-sm">{errors.manualReviewThreshold}</p>
-            )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="rejectionThreshold">Rejection Threshold *</Label>
+            <Label htmlFor="rejectionThreshold" className="text-gray-200">Rejection Threshold (%) *</Label>
             <Input
               id="rejectionThreshold"
               value={formData.rejectionThreshold}
               onChange={(e) => updateFormData("rejectionThreshold", e.target.value)}
-              placeholder="e.g., 0-69"
-              className="bg-gray-800 border-gray-700"
+              placeholder="e.g., 30"
+              className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100 placeholder:text-gray-400"
             />
-            {errors.rejectionThreshold && (
-              <p className="text-red-400 text-sm">{errors.rejectionThreshold}</p>
-            )}
           </div>
-        </div>
 
-        <div className="mt-6 space-y-2">
-          <Label>Notification Preferences</Label>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            {notificationPreferences.map(preference => (
-              <div key={preference} className="flex items-center space-x-2">
-                <Checkbox
-                  id={preference}
-                  checked={formData.notificationPreferences.includes(preference)}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      updateFormData("notificationPreferences", [...formData.notificationPreferences, preference]);
-                    } else {
-                      updateFormData("notificationPreferences", formData.notificationPreferences.filter(p => p !== preference));
-                    }
-                  }}
-                />
-                <Label htmlFor={preference} className="text-sm">{preference}</Label>
-              </div>
-            ))}
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="notificationPreferences" className="text-gray-200">Notification Preferences</Label>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+              {notificationPreferences.map(pref => (
+                <div key={pref} className="flex items-center space-x-2 p-2 rounded-lg bg-gray-800/30 hover:bg-gray-800/50 transition-colors">
+                  <Checkbox
+                    id={pref}
+                    checked={formData.notificationPreferences.includes(pref)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        updateFormData("notificationPreferences", [...formData.notificationPreferences, pref]);
+                      } else {
+                        updateFormData("notificationPreferences", formData.notificationPreferences.filter(p => p !== pref));
+                      }
+                    }}
+                    className="border-gray-500 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                  />
+                  <Label htmlFor={pref} className="text-sm text-gray-200 cursor-pointer">{pref}</Label>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
     </motion.div>
   );
-
   return (
   <div className="min-h-screen bg-gradient-to-br from-gray-950 via-black to-gray-900 text-white">
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12 space-y-8 lg:space-y-12">
