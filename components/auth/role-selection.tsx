@@ -26,6 +26,12 @@ const roles = [
     href: "/register/insurance",
     role: "insurance",
   },
+  {
+    title: "Validator",
+    description: "For professionals validating documents with staking and performance metrics.",
+    href: "/register/validator",
+    role: "validator",
+  },
 ];
 
 export function RoleSelection() {
@@ -65,7 +71,7 @@ export function RoleSelection() {
         >
           Select the option that best describes you to get started.
         </motion.p>
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
           {roles.map((role, index) => (
             <motion.div
               key={role.title}
