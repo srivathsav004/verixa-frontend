@@ -28,9 +28,26 @@ interface LoadingOverlayProps {
   isLoading: boolean
   message?: string
   children: React.ReactNode
+  fullPage?: boolean
 }
 
-export function LoadingOverlay({ isLoading, message, children }: LoadingOverlayProps) {
+export function LoadingOverlay({ isLoading, message, children, fullPage = false }: LoadingOverlayProps) {
+  if (fullPage) {
+    return (
+      <div className="relative">
+        {children}
+        {isLoading && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center z-[1000]">
+            <LoadingSpinner size="lg" />
+            {message && (
+              <p className="mt-3 text-sm text-gray-200 font-medium">{message}</p>
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="relative">
       {children}

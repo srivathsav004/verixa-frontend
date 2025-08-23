@@ -219,7 +219,7 @@ export class InsuranceService {
       registration_certificate: File;
       business_registration_doc: File;
       tax_registration_doc: File;
-      audited_financials: File;
+      audited_financials?: File | null;
     },
     onProgress?: (step: string) => void
   ): Promise<{ user_id: number; insurance_id: number; message: string }> {
@@ -288,7 +288,7 @@ export class InsuranceService {
       registration_certificate: data.registration_certificate,
       business_registration_doc: data.business_registration_doc,
       tax_registration_doc: data.tax_registration_doc,
-      audited_financials: data.audited_financials,
+      audited_financials: data.audited_financials ?? undefined,
     });
 
     onProgress?.("Registration completed!");

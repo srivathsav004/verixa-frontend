@@ -1077,7 +1077,7 @@ export function InsuranceForm() {
       </div>
 
       {/* Step Content */}
-      <LoadingOverlay isLoading={isSubmitting} message={progressMessage}>
+      <LoadingOverlay isLoading={isSubmitting} message={progressMessage} fullPage>
         <div className="bg-gray-900/40 backdrop-blur-lg border border-gray-800 shadow-xl rounded-2xl w-full p-4 sm:p-6 lg:p-8">
           <AnimatePresence mode="wait" initial={false}>
             {currentStep === 0 && renderCompanyInformation()}
