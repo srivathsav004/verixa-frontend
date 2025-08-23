@@ -14,6 +14,8 @@ import { Stepper } from "@/components/ui/stepper";
 import { WalletConnection } from "@/components/auth/wallet-connection";
 import { FileUpload } from "@/components/ui/file-upload";
 import { validateField, validatePassword, validateConfirmPassword } from "@/lib/validation";
+import { InsuranceService } from "@/services/insuranceService";
+
 import { 
   Building2, 
   User, 
@@ -207,6 +209,8 @@ export function InsuranceForm() {
 
   const [errors, setErrors] = useState<Partial<FormData>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [progressMessage, setProgressMessage] = useState<string>("");
 
   const updateFormData = (field: keyof FormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -289,12 +293,72 @@ export function InsuranceForm() {
   };
 
   const handleComplete = async () => {
+    setSubmitError(null);
     setIsSubmitting(true);
-    console.log("Form data:", formData);
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setIsSubmitting(false);
-    // Redirect to login page after successful registration
-    window.location.href = "/login";
+    try {
+      // Basic required docs validation
+      if (!formData.insuranceLicense || !formData.irdaiRegistration || !formData.businessRegistration || !formData.taxRegistration) {
+        throw new Error("Please upload all required legal documents.");
+      }
+
+      await InsuranceService.completeRegistration(
+        {
+          // wallet
+          wallet_address: formData.walletAddress,
+          // basic info
+          company_name: formData.companyName,
+          company_type: formData.companyType,
+          insurance_license_number: formData.insuranceLicenseNumber,
+          registration_number: formData.irdaiRegistrationNumber,
+          established_year: formData.establishedYear ? Number(formData.establishedYear) : undefined,
+          website_url: formData.companyWebsite || undefined,
+          company_logo: formData.companyLogo,
+          // business info
+          annual_premium_collection: formData.annualPremiumCollection ? parseFloat(formData.annualPremiumCollection) : undefined,
+          active_policies: formData.numberOfActivePolicies ? parseInt(formData.numberOfActivePolicies) : undefined,
+          coverage_areas: formData.coverageAreas || undefined,
+          specialization: formData.specialization || undefined,
+          claim_settlement_ratio: formData.claimSettlementRatio ? parseFloat(formData.claimSettlementRatio) : undefined,
+          // contact & tech
+          primary_contact_name: formData.primaryContactPerson,
+          designation: formData.designation || undefined,
+          department: formData.department || undefined,
+          official_email: formData.officialEmailAddress || undefined,
+          phone_number: formData.phoneNumber || undefined,
+          claims_email: formData.claimsDepartmentEmail || undefined,
+          claims_phone: formData.claimsDepartmentPhone || undefined,
+          head_office_address: formData.headOfficeAddress || formData.streetAddress || undefined,
+          city: formData.city || undefined,
+          state: formData.state || undefined,
+          country: formData.country || undefined,
+          regional_offices: formData.regionalOfficeAddresses || undefined,
+          technical_contact_name: formData.technicalContactPerson || undefined,
+          technical_email: formData.technicalEmail || undefined,
+          integration_method: formData.preferredIntegrationMethod || undefined,
+          claims_system: formData.currentClaimsManagementSystem || undefined,
+          monthly_verification_volume: formData.monthlyVerificationVolume ? parseInt(formData.monthlyVerificationVolume) : undefined,
+          auto_approval_threshold: formData.autoApprovalThreshold ? parseFloat(formData.autoApprovalThreshold) : undefined,
+          manual_review_threshold: formData.manualReviewThreshold ? parseFloat(formData.manualReviewThreshold) : undefined,
+          rejection_threshold: formData.rejectionThreshold ? parseFloat(formData.rejectionThreshold) : undefined,
+          notification_preferences: formData.notificationPreferences?.length ? formData.notificationPreferences.join(",") : undefined,
+          payment_method: undefined,
+          monthly_budget: undefined,
+          // docs
+          insurance_license: formData.insuranceLicense,
+          registration_certificate: formData.irdaiRegistration,
+          business_registration_doc: formData.businessRegistration,
+          tax_registration_doc: formData.taxRegistration,
+          audited_financials: formData.auditedFinancialStatements ?? undefined,
+        },
+        (msg) => setProgressMessage(msg)
+      );
+
+      window.location.href = "/login";
+    } catch (e: any) {
+      setSubmitError(e?.message || "Registration failed");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const renderCompanyInformation = () => (
