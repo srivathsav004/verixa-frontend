@@ -13,7 +13,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark" suppressHydrationWarning>
       <head>
         <style>{`
 html {
@@ -23,7 +23,7 @@ html {
 }
         `}</style>
       </head>
-      <body>{children}</body>
+      <body className="min-h-screen bg-black text-white">{children}</body>
     </html>
   )
 }
