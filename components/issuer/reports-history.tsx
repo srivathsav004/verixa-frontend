@@ -54,19 +54,19 @@ export default function ReportsHistory() {
   return (
     <div className="w-full">
       <Card className="border-border">
-        <CardHeader>
+        <CardHeader className="pb-3">
           <CardTitle>Reports History</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0">
           <div className="flex flex-wrap gap-3 items-center">
-            <Input value={search} onChange={(e)=>{ setPage(1); setSearch(e.target.value); }} placeholder="Search by report type" className="w-64" />
-            <Input value={patientId} onChange={(e)=>{ setPage(1); setPatientId(e.target.value); }} placeholder="Filter by patient ID" className="w-48" />
-            <div className="ml-auto text-sm text-muted-foreground">Page {page} of {totalPages} • {total} records</div>
+            <Input value={search} onChange={(e)=>{ setPage(1); setSearch(e.target.value); }} placeholder="Search by report type" className="w-full sm:w-72" />
+            <Input value={patientId} onChange={(e)=>{ setPage(1); setPatientId(e.target.value); }} placeholder="Filter by patient ID" className="w-full sm:w-56" />
+            <div className="ml-auto text-xs sm:text-sm text-muted-foreground">Page {page} of {totalPages} • {total} records</div>
           </div>
 
-          <div className="mt-4 overflow-x-auto rounded-md border border-border">
+          <div className="mt-3 overflow-x-auto rounded-md border border-border">
             <table className="w-full text-sm">
-              <thead className="bg-foreground/5">
+              <thead className="bg-foreground/5 sticky top-0 z-10">
                 <tr>
                   <th className="text-left p-2">ID</th>
                   <th className="text-left p-2">Patient</th>
@@ -82,15 +82,15 @@ export default function ReportsHistory() {
                 {!loading && items.length === 0 && (
                   <tr><td colSpan={5} className="p-3 text-muted-foreground">No records</td></tr>
                 )}
-                {!loading && items.map((r) => (
-                  <tr key={r.id} className="hover:bg-foreground/5">
-                    <td className="p-2">{r.id}</td>
-                    <td className="p-2">{r.patient_id}</td>
-                    <td className="p-2">{r.report_type}</td>
-                    <td className="p-2">
+                {!loading && items.map((r, idx) => (
+                  <tr key={r.id} className={`${idx % 2 ? "bg-foreground/5/20" : ""} hover:bg-foreground/5`}>
+                    <td className="p-2 align-top">{r.id}</td>
+                    <td className="p-2 align-top">{r.patient_id}</td>
+                    <td className="p-2 align-top">{r.report_type}</td>
+                    <td className="p-2 align-top">
                       <a href={r.document_url} target="_blank" className="text-primary underline">Open</a>
                     </td>
-                    <td className="p-2">{new Date(r.created_at).toLocaleString()}</td>
+                    <td className="p-2 align-top whitespace-nowrap">{new Date(r.created_at).toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>

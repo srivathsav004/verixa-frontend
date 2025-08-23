@@ -99,28 +99,28 @@ export default function IssueNewDocument() {
   };
 
   return (
-    <div className="mt-6 space-y-4">
+    <div className="space-y-4">
       <Card className="border-border">
-        <CardHeader>
+        <CardHeader className="pb-3">
           <CardTitle>Issue New Document</CardTitle>
           <CardDescription>Select a patient and upload a report PDF</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0">
           <div className="flex flex-wrap items-center gap-3">
             <Input
               value={search}
               onChange={(e) => { setPage(1); setSearch(e.target.value); }}
               placeholder="Search by name, email, phone"
-              className="w-72"
+              className="w-full sm:w-80"
             />
-            <div className="ml-auto text-sm text-muted-foreground">
+            <div className="ml-auto text-xs sm:text-sm text-muted-foreground">
               Page {page} of {totalPages} • {total} patients
             </div>
           </div>
 
-          <div className="mt-4 overflow-x-auto rounded-md border border-border">
+          <div className="mt-3 overflow-x-auto rounded-md border border-border">
             <table className="w-full text-sm">
-              <thead className="bg-foreground/5">
+              <thead className="bg-foreground/5 sticky top-0 z-10">
                 <tr>
                   <th className="text-left p-2">Name</th>
                   <th className="text-left p-2">Email</th>
@@ -140,8 +140,8 @@ export default function IssueNewDocument() {
                     <td colSpan={5} className="p-3 text-muted-foreground">No patients found</td>
                   </tr>
                 )}
-                {!loading && patients.map((p) => (
-                  <tr key={p.patient_id} className={selected?.patient_id === p.patient_id ? "bg-foreground/5" : undefined}>
+                {!loading && patients.map((p, idx) => (
+                  <tr key={p.patient_id} className={`${idx % 2 ? "bg-foreground/5/20" : ""} ${selected?.patient_id === p.patient_id ? "bg-foreground/10" : ""}`}>
                     <td className="p-2 font-medium">{p.first_name} {p.last_name}</td>
                     <td className="p-2">{p.email}</td>
                     <td className="p-2">{p.phone_number}</td>
@@ -165,13 +165,13 @@ export default function IssueNewDocument() {
           </div>
 
           {/* Issue form */}
-          <div className="mt-6 rounded-md border border-border p-3 bg-foreground/5">
+          <div className="mt-5 rounded-md border border-border p-4 bg-foreground/5">
             <div className="text-sm font-medium">Issue Report</div>
             {!selected && (
               <div className="mt-2 text-sm text-muted-foreground">Select a patient to continue</div>
             )}
             {selected && (
-              <div className="mt-2 grid gap-3 sm:grid-cols-2">
+              <div className="mt-3 grid gap-4 sm:grid-cols-2">
                 <div>
                   <div className="text-xs text-muted-foreground">Selected patient</div>
                   <div className="mt-1 text-sm font-medium">{selected.first_name} {selected.last_name}</div>
@@ -181,7 +181,7 @@ export default function IssueNewDocument() {
                   <Input value={reportType} onChange={(e) => setReportType(e.target.value)} placeholder="Report type (e.g., Blood Test, MRI)" />
                   <Input type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} />
                   <div className="flex items-center gap-2">
-                    <Button disabled={submitting} onClick={onSubmit}> {submitting ? "Submitting..." : "Issue / Submit"} </Button>
+                    <Button disabled={submitting} onClick={onSubmit}>{submitting ? "Submitting..." : "Issue"}</Button>
                     {toastMsg && <div className="text-xs text-muted-foreground">{toastMsg}</div>}
                   </div>
                 </div>

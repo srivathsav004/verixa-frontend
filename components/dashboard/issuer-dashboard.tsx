@@ -244,45 +244,47 @@ export function IssuerDashboard() {
             </header>
 
             <main className="pl-4 pr-0 py-6 w-full max-w-full">
-              {/* Hero Stats */}
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <Card className="bg-gradient-to-br from-foreground/5 to-transparent border-border">
-                  <CardHeader>
-                  <CardDescription>Total Reports Issued</CardDescription>
-                    <CardTitle className="text-3xl">1,248</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-xs text-emerald-400">+12% this week</div>
-                  </CardContent>
-                </Card>
-                <Card className="bg-gradient-to-br from-foreground/5 to-transparent border-border">
-                  <CardHeader>
-                    <CardDescription>Templates Helping AI</CardDescription>
-                    <CardTitle className="text-3xl">17</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-xs text-muted-foreground">Used in verifications</div>
-                  </CardContent>
-                </Card>
-                <Card className="bg-gradient-to-br from-foreground/5 to-transparent border-border">
-                  <CardHeader>
-                    <CardDescription>POL Earned</CardDescription>
-                    <CardTitle className="text-3xl">54.21</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-xs text-muted-foreground">+0.01 POL per verification</div>
-                  </CardContent>
-                </Card>
-                <Card className="bg-gradient-to-br from-foreground/5 to-transparent border-border">
-                  <CardHeader>
-                    <CardDescription>Template Success Rate</CardDescription>
-                    <CardTitle className="text-3xl">93%</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-xs text-emerald-400">AI verified successfully</div>
-                  </CardContent>
-                </Card>
-              </div>
+              {/* Hero Stats: show only on Dashboard */}
+              {view === "dashboard" && (
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <Card className="bg-gradient-to-br from-foreground/5 to-transparent border-border">
+                    <CardHeader>
+                    <CardDescription>Total Reports Issued</CardDescription>
+                      <CardTitle className="text-3xl">1,248</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-xs text-emerald-400">+12% this week</div>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-gradient-to-br from-foreground/5 to-transparent border-border">
+                    <CardHeader>
+                      <CardDescription>Templates Helping AI</CardDescription>
+                      <CardTitle className="text-3xl">17</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-xs text-muted-foreground">Used in verifications</div>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-gradient-to-br from-foreground/5 to-transparent border-border">
+                    <CardHeader>
+                      <CardDescription>POL Earned</CardDescription>
+                      <CardTitle className="text-3xl">54.21</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-xs text-muted-foreground">+0.01 POL per verification</div>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-gradient-to-br from-foreground/5 to-transparent border-border">
+                    <CardHeader>
+                      <CardDescription>Template Success Rate</CardDescription>
+                      <CardTitle className="text-3xl">93%</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-xs text-emerald-400">AI verified successfully</div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
 
               {/* Quick Actions */}
               {/* <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
