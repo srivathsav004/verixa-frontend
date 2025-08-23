@@ -669,6 +669,7 @@ export function InsuranceForm() {
               label="Insurance License"
               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
               maxSize={10}
+              required={true}
               value={formData.insuranceLicense}
               onChange={(file) => updateFormData("insuranceLicense", file)}
               description="PDF, DOC, or image files up to 10MB"
@@ -681,6 +682,7 @@ export function InsuranceForm() {
               label="IRDAI Registration"
               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
               maxSize={10}
+              required={true}
               value={formData.irdaiRegistration}
               onChange={(file) => updateFormData("irdaiRegistration", file)}
               description="PDF, DOC, or image files up to 10MB"
@@ -693,6 +695,7 @@ export function InsuranceForm() {
               label="Business Registration"
               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
               maxSize={10}
+              required={true}
               value={formData.businessRegistration}
               onChange={(file) => updateFormData("businessRegistration", file)}
               description="PDF, DOC, or image files up to 10MB"
@@ -705,6 +708,7 @@ export function InsuranceForm() {
               label="Tax Registration"
               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
               maxSize={10}
+              required={true}
               value={formData.taxRegistration}
               onChange={(file) => updateFormData("taxRegistration", file)}
               description="PDF, DOC, or image files up to 10MB"
@@ -1082,12 +1086,19 @@ export function InsuranceForm() {
                 initial={false}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
+                className="space-y-4"
               >
                 <WalletConnection
                   onWalletConnected={handleWalletConnected}
                   onBack={handleBack}
                   onComplete={handleComplete}
                 />
+                {submitError && (
+                  <Alert className="border-red-500 bg-red-500/10">
+                    <AlertCircle className="h-4 w-4 text-red-400" />
+                    <AlertDescription className="text-red-400">{submitError}</AlertDescription>
+                  </Alert>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
