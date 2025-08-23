@@ -23,7 +23,7 @@ html {
 }
         `}</style>
       </head>
-      <body className="min-h-screen bg-black text-white">{children}</body>
+      <body className="min-h-screen bg-background text-foreground">{children}</body>
     </html>
   )
 }
