@@ -27,6 +27,7 @@ export function LoginForm() {
       if (role === "issuer") router.push("/dashboard/issuer");
       else if (role === "insurance") router.push("/dashboard/insurance");
       else if (role === "patient") router.push("/dashboard/patient");
+      else if (role === "validator") router.push("/dashboard/validator");
       else router.push("/");
     } catch (err: any) {
       setError(err?.message || "Login failed. Please try again.");
