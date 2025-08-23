@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,12 +11,13 @@ type IssuedDoc = {
   patient_id: number;
   report_type: string;
   document_url: string;
-  issuer_user_id?: number | null;
+  issuer_id?: number | null;
   created_at: string;
 };
 
 export default function ReportsHistory() {
   const api = useMemo(() => (config.apiBaseUrl || "http://127.0.0.1:8000") + "/api", []);
+  const [allItems, setAllItems] = useState<IssuedDoc[]>([]);
   const [items, setItems] = useState<IssuedDoc[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -25,22 +26,20 @@ export default function ReportsHistory() {
   const [search, setSearch] = useState("");
   const [patientId, setPatientId] = useState<string>("");
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-
+  // Minimal guard to avoid duplicate fetch in React Strict Mode (dev only)
+  const fetchedOnceRef = useRef(false);
+  // Single fetch of all issued docs
   useEffect(() => {
     let ignore = false;
+    if (fetchedOnceRef.current) return;
+    fetchedOnceRef.current = true;
     const run = async () => {
       setLoading(true);
       try {
-        const qp = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
-        if (search.trim()) qp.set("search", search.trim());
-        if (patientId.trim()) qp.set("patient_id", patientId.trim());
-        const res = await fetch(`${api}/issuer/issued-docs?${qp.toString()}`);
+        const res = await fetch(`${api}/issuer/issued-docs/fetch`);
         if (!res.ok) throw new Error(`Failed to load: ${res.status}`);
         const data = await res.json();
-        if (!ignore) {
-          setItems(data.items || []);
-          setTotal(data.total || 0);
-        }
+        if (!ignore) setAllItems(data.items || []);
       } catch (e) {
         console.error(e);
       } finally {
@@ -49,7 +48,23 @@ export default function ReportsHistory() {
     };
     run();
     return () => { ignore = true; };
-  }, [api, page, pageSize, search, patientId]);
+  }, [api]);
+
+  // Client-side filter + paginate
+  useEffect(() => {
+    const term = search.trim().toLowerCase();
+    const pid = patientId.trim();
+    const filtered = allItems.filter(r => {
+      const matchesType = term ? r.report_type.toLowerCase().includes(term) : true;
+      const matchesPid = pid ? String(r.patient_id) === pid : true;
+      return matchesType && matchesPid;
+    });
+    const newTotal = filtered.length;
+    const start = (page - 1) * pageSize;
+    const pageItems = filtered.slice(start, start + pageSize);
+    setItems(pageItems);
+    setTotal(newTotal);
+  }, [allItems, search, patientId, page, pageSize]);
 
   return (
     <div className="w-full">
