@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import IssueNewDocument from "@/components/issuer/issue-new-document";
+import ReportsHistory from "@/components/issuer/reports-history";
 import {
   Sidebar,
   SidebarContent,
@@ -48,6 +50,7 @@ type Activity = {
 export function IssuerDashboard() {
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [view, setView] = useState<"dashboard" | "issue" | "history">("dashboard");
 
   // Mock async load
   useEffect(() => {
@@ -114,17 +117,26 @@ export function IssuerDashboard() {
                 <SidebarGroupContent>
                   <SidebarMenu>
                     <SidebarMenuItem>
-                      <SidebarMenuButton className="justify-start">
+                      <SidebarMenuButton
+                        className={`justify-start ${view === "dashboard" ? "bg-foreground/10" : ""}`}
+                        onClick={() => setView("dashboard")}
+                      >
                         <LayoutDashboard /> <span>Dashboard</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
-                      <SidebarMenuButton className="justify-start">
+                      <SidebarMenuButton
+                        className={`justify-start ${view === "issue" ? "bg-foreground/10" : ""}`}
+                        onClick={() => setView("issue")}
+                      >
                         <FilePlus2 /> <span>Issue Reports</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
-                      <SidebarMenuButton className="justify-start">
+                      <SidebarMenuButton
+                        className={`justify-start ${view === "history" ? "bg-foreground/10" : ""}`}
+                        onClick={() => setView("history")}
+                      >
                         <History /> <span>Reports History</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -273,8 +285,8 @@ export function IssuerDashboard() {
               </div>
 
               {/* Quick Actions */}
-              <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <Button className="h-12 justify-start bg-foreground/10 text-foreground hover:bg-foreground/20">
+              {/* <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <Button className="h-12 justify-start bg-foreground/10 text-foreground hover:bg-foreground/20" onClick={() => setView("issue")}>
                   <FilePlus2 className="mr-2 h-4 w-4" /> Issue New Report
                 </Button>
                 <Button className="h-12 justify-start bg-foreground/10 text-foreground hover:bg-foreground/20">
@@ -286,55 +298,69 @@ export function IssuerDashboard() {
                 <Button className="h-12 justify-start bg-foreground/10 text-foreground hover:bg-foreground/20">
                   <PieChart className="mr-2 h-4 w-4" /> Template Analytics
                 </Button>
-              </div>
+              </div> */}
 
-              {/* Body: Activity + Chart */}
-              <div className="mt-6 grid gap-6 lg:grid-cols-3">
-                <Card className="border-border lg:col-span-2">
-                  <CardHeader>
-                    <CardTitle>Template Performance</CardTitle>
-                    <CardDescription>Usage over the last 7 days</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ChartContainer
-                      config={{ uses: { label: "Uses", color: "var(--foreground)" } }}
-                      className="aspect-[16/6]"
-                    >
-                      <LineChart data={chartData} margin={{ left: 12, right: 12 }}>
-                        <XAxis dataKey="day" tickLine={false} axisLine={false} tick={{ fill: "var(--muted-foreground)" }} />
-                        <YAxis tickLine={false} axisLine={false} tick={{ fill: "var(--muted-foreground)" }} />
-                        <ChartTooltip content={<ChartTooltipContent />} />
-                        <ChartLegend content={<ChartLegendContent />} />
-                        <Line type="monotone" dataKey="uses" stroke="var(--foreground)" strokeWidth={2} dot={false} />
-                      </LineChart>
-                    </ChartContainer>
-                  </CardContent>
-                </Card>
+              {/* Body: switch views within the same page */}
+              {view === "dashboard" && (
+                <div className="mt-6 grid gap-6 lg:grid-cols-3">
+                  <Card className="border-border lg:col-span-2">
+                    <CardHeader>
+                      <CardTitle>Template Performance</CardTitle>
+                      <CardDescription>Usage over the last 7 days</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <ChartContainer
+                        config={{ uses: { label: "Uses", color: "var(--foreground)" } }}
+                        className="aspect-[16/6]"
+                      >
+                        <LineChart data={chartData} margin={{ left: 12, right: 12 }}>
+                          <XAxis dataKey="day" tickLine={false} axisLine={false} tick={{ fill: "var(--muted-foreground)" }} />
+                          <YAxis tickLine={false} axisLine={false} tick={{ fill: "var(--muted-foreground)" }} />
+                          <ChartTooltip content={<ChartTooltipContent />} />
+                          <ChartLegend content={<ChartLegendContent />} />
+                          <Line type="monotone" dataKey="uses" stroke="var(--foreground)" strokeWidth={2} dot={false} />
+                        </LineChart>
+                      </ChartContainer>
+                    </CardContent>
+                  </Card>
 
-                <Card className="border-border">
-                  <CardHeader>
-                    <CardTitle>Recent Activity</CardTitle>
-                    <CardDescription>Live updates from your organization</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {loading && (
-                        <>
-                          <Skeleton className="h-4 w-3/4 bg-foreground/10" />
-                          <Skeleton className="h-4 w-2/3 bg-foreground/10" />
-                          <Skeleton className="h-4 w-4/5 bg-foreground/10" />
-                        </>
-                      )}
-                      {!loading && activities.map((a) => (
-                        <div key={a.id} className="rounded-lg border border-border bg-foreground/5 p-3">
-                          <div className="text-sm">{a.text}</div>
-                          <div className="mt-1 text-xs text-muted-foreground">{a.time}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+                  <Card className="border-border">
+                    <CardHeader>
+                      <CardTitle>Recent Activity</CardTitle>
+                      <CardDescription>Live updates from your organization</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {loading && (
+                          <>
+                            <Skeleton className="h-4 w-3/4 bg-foreground/10" />
+                            <Skeleton className="h-4 w-2/3 bg-foreground/10" />
+                            <Skeleton className="h-4 w-4/5 bg-foreground/10" />
+                          </>
+                        )}
+                        {!loading && activities.map((a) => (
+                          <div key={a.id} className="rounded-lg border border-border bg-foreground/5 p-3">
+                            <div className="text-sm">{a.text}</div>
+                            <div className="mt-1 text-xs text-muted-foreground">{a.time}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
+              {view === "issue" && (
+                <div className="mt-6">
+                  <IssueNewDocument />
+                </div>
+              )}
+
+              {view === "history" && (
+                <div className="mt-6">
+                  <ReportsHistory />
+                </div>
+              )}
             </main>
           </SidebarInset>
         </div>
