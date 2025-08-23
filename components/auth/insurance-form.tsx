@@ -292,7 +292,8 @@ export function InsuranceForm() {
     console.log("Form data:", formData);
     await new Promise(resolve => setTimeout(resolve, 2000));
     setIsSubmitting(false);
-    window.location.href = "/dashboard";
+    // Redirect to login page after successful registration
+    window.location.href = "/login";
   };
 
   const renderCompanyInformation = () => (

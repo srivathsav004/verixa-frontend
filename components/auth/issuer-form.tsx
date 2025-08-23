@@ -270,8 +270,8 @@ export function IssuerForm() {
     await new Promise(resolve => setTimeout(resolve, 2000));
     
     setIsSubmitting(false);
-    // Redirect to success page or dashboard
-    window.location.href = "/dashboard";
+    // Redirect to login page after successful registration
+    window.location.href = "/login";
   };
 
   const renderBasicInformation = () => (
