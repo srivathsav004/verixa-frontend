@@ -1,4 +1,6 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+import { config } from "@/lib/config";
+
+const API_BASE_URL = config.apiBaseUrl;
 
 export interface CreateUserResponse {
   user_id: number;
