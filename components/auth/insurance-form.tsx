@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Stepper } from "@/components/ui/stepper";
 import { WalletConnection } from "@/components/auth/wallet-connection";
 import { FileUpload } from "@/components/ui/file-upload";
+import { LoadingOverlay } from "@/components/ui/loading-spinner";
 import { validateField, validatePassword, validateConfirmPassword } from "@/lib/validation";
 import { InsuranceService } from "@/services/insuranceService";
 
@@ -1065,25 +1066,27 @@ export function InsuranceForm() {
       </div>
 
       {/* Step Content */}
-      <div className="bg-gray-900/40 backdrop-blur-lg border border-gray-800 shadow-xl rounded-2xl w-full p-4 sm:p-6 lg:p-8">
-        <AnimatePresence mode="wait" initial={false}>
-          {currentStep === 0 && renderCompanyInformation()}
-          {currentStep === 1 && renderTechnicalSetup()}
-          {currentStep === 2 && (
-            <motion.div
-              initial={false}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-            >
-              <WalletConnection
-                onWalletConnected={handleWalletConnected}
-                onBack={handleBack}
-                onComplete={handleComplete}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+      <LoadingOverlay isLoading={isSubmitting} message={progressMessage}>
+        <div className="bg-gray-900/40 backdrop-blur-lg border border-gray-800 shadow-xl rounded-2xl w-full p-4 sm:p-6 lg:p-8">
+          <AnimatePresence mode="wait" initial={false}>
+            {currentStep === 0 && renderCompanyInformation()}
+            {currentStep === 1 && renderTechnicalSetup()}
+            {currentStep === 2 && (
+              <motion.div
+                initial={false}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+              >
+                <WalletConnection
+                  onWalletConnected={handleWalletConnected}
+                  onBack={handleBack}
+                  onComplete={handleComplete}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </LoadingOverlay>
 
       {/* Navigation */}
       {currentStep < 2 && (
