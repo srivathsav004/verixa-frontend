@@ -6,6 +6,7 @@ const API_BASE_URL = config.apiBaseUrl;
 export interface CreateUserData {
   wallet_address: string;
   role: string;
+  password: string;
 }
 
 export interface UserResponse {
@@ -82,6 +83,7 @@ export interface IssuerReportFormatsResponse {
 export interface IssuerRegistrationData {
   // User data
   wallet_address: string;
+  password: string;
   
   // Basic info
   organization_name: string;
@@ -214,7 +216,8 @@ export class IssuerService {
       onProgress?.('Creating user account...');
       const userResponse = await this.createUser({
         wallet_address: data.wallet_address,
-        role: 'issuer'
+        role: 'issuer',
+        password: data.password,
       });
       
       // Step 2: Create basic info

@@ -311,6 +311,7 @@ export function PatientForm() {
       // Prepare payloads mapped to backend fields
       const payload = {
         wallet_address: formData.walletAddress,
+        password: formData.password,
         first_name: formData.firstName,
         last_name: formData.lastName,
         dob: formData.dateOfBirth, // already in YYYY-MM-DD

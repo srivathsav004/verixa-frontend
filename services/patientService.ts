@@ -6,6 +6,7 @@ const API_BASE_URL = config.apiBaseUrl;
 export interface CreateUserData {
   wallet_address: string;
   role: string;
+  password: string;
 }
 
 export interface UserResponse {
@@ -122,6 +123,7 @@ export class PatientService {
   static async completeRegistration(
     data: {
       wallet_address: string;
+      password: string;
       // basic info
       first_name: string;
       last_name: string;
@@ -149,6 +151,7 @@ export class PatientService {
       const userResponse = await this.createUser({
         wallet_address: data.wallet_address,
         role: 'patient',
+        password: data.password,
       });
 
       // Step 2: Create patient basic info

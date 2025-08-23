@@ -306,6 +306,7 @@ export function InsuranceForm() {
         {
           // wallet
           wallet_address: formData.walletAddress,
+          password: formData.password,
           // basic info
           company_name: formData.companyName,
           company_type: formData.companyType,

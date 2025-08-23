@@ -5,6 +5,7 @@ const API_BASE_URL = config.apiBaseUrl;
 export interface CreateUserData {
   wallet_address: string;
   role: string;
+  password: string;
 }
 
 export interface UserResponse {
@@ -174,6 +175,7 @@ export class InsuranceService {
     data: {
       // wallet
       wallet_address: string;
+      password: string;
       // basic info
       company_name: string;
       company_type: string;
@@ -223,7 +225,7 @@ export class InsuranceService {
   ): Promise<{ user_id: number; insurance_id: number; message: string }> {
     // 1. Create user (role insurance)
     onProgress?.("Creating user account...");
-    const user = await this.createUser({ wallet_address: data.wallet_address, role: "insurance" });
+    const user = await this.createUser({ wallet_address: data.wallet_address, role: "insurance", password: data.password });
 
     // 2. Basic info
     onProgress?.("Saving insurance basic information...");

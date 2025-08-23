@@ -282,6 +282,7 @@ export function IssuerForm() {
       // Prepare the registration data
       const registrationData = {
         wallet_address: formData.walletAddress,
+        password: formData.password,
         organization_name: formData.organizationName,
         organization_type: formData.organizationType,
         license_number: formData.licenseNumber,
