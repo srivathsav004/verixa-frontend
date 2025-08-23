@@ -40,21 +40,8 @@ export function WalletConnection({ onWalletConnected, onBack, onComplete }: Wall
     rpcUrls: ["https://rpc-amoy.polygon.technology"],
   };
 
-  const checkIfWalletIsConnected = async () => {
-    try {
-      if (typeof window.ethereum !== "undefined") {
-        const accounts = await window.ethereum.request({ method: "eth_accounts" });
-        if (accounts.length > 0) {
-          setWalletAddress(accounts[0]);
-          setIsConnected(true);
-          onWalletConnected(accounts[0]);
-          await checkNetwork();
-        }
-      }
-    } catch (error) {
-      console.error("Error checking wallet connection:", error);
-    }
-  };
+  // We intentionally do not auto-connect using eth_accounts to avoid stale accounts.
+  // User must explicitly click "Connect" on this page each time.
 
   const checkNetwork = async () => {
     try {
@@ -79,14 +66,28 @@ export function WalletConnection({ onWalletConnected, onBack, onComplete }: Wall
         return;
       }
 
-      const accounts = await window.ethereum.request({
-        method: "eth_requestAccounts",
-      });
+      // Request permissions every time to trigger the account picker
+      try {
+        await window.ethereum.request({
+          method: "wallet_requestPermissions",
+          params: [{ eth_accounts: {} }],
+        });
+      } catch (permErr: any) {
+        // If user rejects, surface the error
+        if (permErr?.code === 4001) {
+          throw new Error("Permission request rejected");
+        }
+        // Continue to try regular request as fallback
+      }
+
+      const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
 
       if (accounts.length > 0) {
-        setWalletAddress(accounts[0]);
+        // Prefer the provider's selectedAddress if present
+        const selected = window.ethereum.selectedAddress || accounts[0];
+        setWalletAddress(selected);
         setIsConnected(true);
-        onWalletConnected(accounts[0]);
+        onWalletConnected(selected);
         await checkNetwork();
       }
     } catch (error: any) {
@@ -103,6 +104,7 @@ export function WalletConnection({ onWalletConnected, onBack, onComplete }: Wall
         params: [{ chainId: polygonAmoyConfig.chainId }],
       });
       setIsPolygonAmoy(true);
+      setNetwork(polygonAmoyConfig.chainId);
       setError("");
     } catch (switchError: any) {
       if (switchError.code === 4902) {
@@ -112,6 +114,7 @@ export function WalletConnection({ onWalletConnected, onBack, onComplete }: Wall
             params: [polygonAmoyConfig],
           });
           setIsPolygonAmoy(true);
+          setNetwork(polygonAmoyConfig.chainId);
           setError("");
         } catch (addError) {
           setError("Failed to add Polygon Amoy network");
@@ -123,22 +126,44 @@ export function WalletConnection({ onWalletConnected, onBack, onComplete }: Wall
   };
 
   useEffect(() => {
-    checkIfWalletIsConnected();
-    
+    // Reset state on mount so user must connect wallet on this page
+    setWalletAddress("");
+    setIsConnected(false);
+    setNetwork("");
+    setIsPolygonAmoy(false);
+
     if (typeof window.ethereum !== "undefined") {
-      window.ethereum.on("accountsChanged", (accounts: string[]) => {
+      const handleAccountsChanged = (accounts: string[]) => {
         if (accounts.length > 0) {
           setWalletAddress(accounts[0]);
+          setIsConnected(true);
           onWalletConnected(accounts[0]);
+          checkNetwork();
+          setError("");
         } else {
+          // Disconnected
           setWalletAddress("");
           setIsConnected(false);
+          setNetwork("");
+          setIsPolygonAmoy(false);
         }
-      });
+      };
 
-      window.ethereum.on("chainChanged", () => {
+      const handleChainChanged = () => {
         checkNetwork();
-      });
+        setError("");
+      };
+
+      window.ethereum.on("accountsChanged", handleAccountsChanged);
+      window.ethereum.on("chainChanged", handleChainChanged);
+
+      // Cleanup to avoid duplicate handlers and stale updates
+      return () => {
+        try {
+          window.ethereum.removeListener("accountsChanged", handleAccountsChanged);
+          window.ethereum.removeListener("chainChanged", handleChainChanged);
+        } catch (_) {}
+      };
     }
   }, []);
 
