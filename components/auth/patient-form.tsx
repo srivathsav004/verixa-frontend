@@ -12,6 +12,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Stepper } from "@/components/ui/stepper";
 import { WalletConnection } from "@/components/auth/wallet-connection";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { validateField, validatePassword, validateConfirmPassword } from "@/lib/validation";
 import { 
   User, 
@@ -346,13 +348,35 @@ export function PatientForm() {
 
           <div className="space-y-2">
             <Label htmlFor="dateOfBirth" className="text-gray-200">Date of Birth *</Label>
-            <Input
-              id="dateOfBirth"
-              type="date"
-              value={formData.dateOfBirth}
-              onChange={(e) => updateFormData("dateOfBirth", e.target.value)}
-              className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100 placeholder:text-gray-400"
-            />
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-between bg-gray-800/50 border-gray-600 text-gray-100 hover:bg-gray-800/60"
+                >
+                  <span className="truncate">
+                    {formData.dateOfBirth
+                      ? new Date(formData.dateOfBirth).toLocaleDateString()
+                      : "Select date"}
+                  </span>
+                  <Calendar className="h-4 w-4 opacity-70" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarComponent
+                  mode="single"
+                  selected={formData.dateOfBirth ? new Date(formData.dateOfBirth) : undefined}
+                  onSelect={(d) =>
+                    updateFormData(
+                      "dateOfBirth",
+                      d ? new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())).toISOString().slice(0, 10) : ""
+                    )
+                  }
+                  disabled={{ after: new Date() }}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
             {errors.dateOfBirth && (
               <p className="text-red-400 text-sm flex items-center gap-1">
                 <AlertCircle className="h-3 w-3" />
