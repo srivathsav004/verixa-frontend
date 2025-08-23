@@ -1036,10 +1036,6 @@ export function IssuerForm() {
   return (
   <div className="min-h-screen bg-gradient-to-br from-gray-950 via-black to-gray-900 text-white relative">
     {/* Loading Overlay */}
-    {isSubmitting && (
-      <LoadingOverlay message={progressMessage} />
-    )}
-    
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12 space-y-8 lg:space-y-12">
       
       {/* Header */}
@@ -1058,37 +1054,39 @@ export function IssuerForm() {
       </div>
 
       {/* Step Content */}
-      <Card className="bg-gray-900/40 backdrop-blur-lg border border-gray-800 shadow-xl rounded-2xl w-full">
-        <CardContent className="p-4 sm:p-6 lg:p-8">
-          <AnimatePresence mode="wait" initial={false}>
-            {currentStep === 0 && renderBasicInformation()}
-            {currentStep === 1 && renderTechnicalSetup()}
-            {currentStep === 2 && (
-              <motion.div
-                initial={false}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-              >
-                <WalletConnection
-                  onWalletConnected={handleWalletConnected}
-                  onBack={handleBack}
-                  onComplete={handleComplete}
-                />
-                
-                {/* Registration Error Display */}
-                {registrationError && (
-                  <Alert className="mt-4 border-red-600 bg-red-900/20">
-                    <AlertCircle className="h-4 w-4 text-red-400" />
-                    <AlertDescription className="text-red-300">
-                      {registrationError}
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </CardContent>
-      </Card>
+      <LoadingOverlay isLoading={isSubmitting} message={progressMessage}>
+        <Card className="bg-gray-900/40 backdrop-blur-lg border border-gray-800 shadow-xl rounded-2xl w-full">
+          <CardContent className="p-4 sm:p-6 lg:p-8">
+            <AnimatePresence mode="wait" initial={false}>
+              {currentStep === 0 && renderBasicInformation()}
+              {currentStep === 1 && renderTechnicalSetup()}
+              {currentStep === 2 && (
+                <motion.div
+                  initial={false}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                >
+                  <WalletConnection
+                    onWalletConnected={handleWalletConnected}
+                    onBack={handleBack}
+                    onComplete={handleComplete}
+                  />
+                  
+                  {/* Registration Error Display */}
+                  {registrationError && (
+                    <Alert className="mt-4 border-red-600 bg-red-900/20">
+                      <AlertCircle className="h-4 w-4 text-red-400" />
+                      <AlertDescription className="text-red-300">
+                        {registrationError}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </CardContent>
+        </Card>
+      </LoadingOverlay>
 
       {/* Navigation */}
       {currentStep < 2 && (

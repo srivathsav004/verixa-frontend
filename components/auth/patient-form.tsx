@@ -12,6 +12,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Stepper } from "@/components/ui/stepper";
 import { WalletConnection } from "@/components/auth/wallet-connection";
+import { LoadingOverlay } from "@/components/ui/loading-spinner";
+import { FileUpload } from "@/components/ui/file-upload";
+import { PatientService } from "@/services/patientService";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { validateField, validatePassword, validateConfirmPassword } from "@/lib/validation";
@@ -195,6 +198,9 @@ export function PatientForm() {
 
   const [errors, setErrors] = useState<Partial<FormData>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [progressMessage, setProgressMessage] = useState("");
+  const [registrationError, setRegistrationError] = useState<string | null>(null);
+  const [dobOpen, setDobOpen] = useState(false);
 
   const updateFormData = (field: keyof FormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -286,15 +292,59 @@ export function PatientForm() {
 
   const handleComplete = async () => {
     setIsSubmitting(true);
-    // Here you would typically submit the form data to your backend
-    console.log("Form data:", formData);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    setIsSubmitting(false);
-    // Redirect to login page after successful registration
-    window.location.href = "/login";
+    setRegistrationError(null);
+    setProgressMessage("Starting registration...");
+
+    try {
+      // Basic validations before API calls
+      if (!formData.walletAddress) {
+        setRegistrationError("Please connect your wallet before completing registration.");
+        setIsSubmitting(false);
+        return;
+      }
+      if (!formData.idDocument) {
+        setRegistrationError("Please upload your government ID document.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Prepare payloads mapped to backend fields
+      const payload = {
+        wallet_address: formData.walletAddress,
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        dob: formData.dateOfBirth, // already in YYYY-MM-DD
+        gender: formData.gender,
+        blood_group: formData.bloodGroup || undefined,
+        marital_status: formData.maritalStatus || undefined,
+        email: formData.emailAddress,
+        phone_number: formData.phoneNumber,
+        alt_phone_number: formData.alternativePhone || undefined,
+        gov_id_type: formData.governmentIdType,
+        gov_id_number: formData.idNumber,
+        gov_id_document: formData.idDocument as File,
+        insurance_provider: formData.currentInsuranceProvider || undefined,
+        policy_number: formData.policyNumber || undefined,
+        coverage_type: formData.coverageType || undefined,
+        privacy_preferences: formData.privacyPreferences || undefined,
+      };
+
+      const result = await PatientService.completeRegistration(
+        payload,
+        (msg: string) => setProgressMessage(msg)
+      );
+
+      console.log("Patient registration successful:", result);
+      setProgressMessage("Registration completed successfully!");
+
+      setTimeout(() => {
+        window.location.href = "/login";
+      }, 1500);
+    } catch (error: any) {
+      console.error("Patient registration failed:", error);
+      setRegistrationError(error?.message || "Registration failed. Please try again.");
+      setIsSubmitting(false);
+    }
   };
 
   const renderPersonalInformation = () => (
@@ -348,7 +398,7 @@ export function PatientForm() {
 
           <div className="space-y-2">
             <Label htmlFor="dateOfBirth" className="text-gray-200">Date of Birth *</Label>
-            <Popover>
+            <Popover open={dobOpen} onOpenChange={setDobOpen}>
               <PopoverTrigger asChild>
                 <div
                   role="button"
@@ -377,23 +427,41 @@ export function PatientForm() {
                 <CalendarComponent
                   className="text-gray-100"
                   classNames={{
-                    caption_label: "text-gray-100 font-medium",
+                    caption_label: "flex items-center gap-2 text-gray-200 font-medium",
                     weekdays: "grid grid-cols-7 w-full",
                     weekday: "text-gray-300 font-medium text-[0.8rem] text-center",
-                    button_previous: "text-gray-100",
-                    button_next: "text-gray-100",
+                    button_previous: "text-gray-100 hover:text-white",
+                    button_next: "text-gray-100 hover:text-white",
+
+                    // 👇 NEW: month/year dropdown styling
+                    dropdowns: "flex items-center gap-2 justify-center",
+                    dropdown_root: "relative border border-gray-600 rounded-md bg-gray-800 text-gray-100 hover:border-gray-500 focus:ring-2 focus:ring-blue-400 transition",
+                    dropdown: "absolute inset-0 opacity-0 cursor-pointer", // underlying <select>
+                    //caption_label: "flex items-center gap-2 text-gray-200 font-medium", // when dropdown is rendered, label turns into container
                   }}
                   mode="single"
+                  captionLayout="dropdown"   // ✅ month & year dropdown
+                  fromYear={1900}
+                  toYear={new Date().getFullYear()}
                   selected={formData.dateOfBirth ? new Date(formData.dateOfBirth) : undefined}
-                  onSelect={(d) =>
+                  onSelect={(d) => {
                     updateFormData(
                       "dateOfBirth",
-                      d ? new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())).toISOString().slice(0, 10) : ""
-                    )
-                  }
+                      d
+                        ? new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()))
+                            .toISOString()
+                            .slice(0, 10)
+                        : ""
+                    );
+                    if (d) {
+                      setDobOpen(false);
+                    }
+                  }}
                   disabled={{ after: new Date() }}
                   initialFocus
                 />
+
+
               </PopoverContent>
             </Popover>
             {errors.dateOfBirth && (
@@ -758,19 +826,21 @@ export function PatientForm() {
           </div>
 
           <div className="md:col-span-2 space-y-3">
-            <Label className="text-gray-200">ID Document Upload *</Label>
-            <div className="flex items-center justify-center w-full">
-              <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-600 border-dashed rounded-lg cursor-pointer bg-gray-800/30 hover:bg-gray-800/50 transition-colors">
-                <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                  <Upload className="w-8 h-8 mb-3 text-gray-400" />
-                  <p className="mb-2 text-sm text-gray-400">
-                    <span className="font-semibold">Click to upload</span> ID document
-                  </p>
-                  <p className="text-xs text-gray-500">PDF, JPG, PNG up to 5MB</p>
-                </div>
-                <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png" />
-              </label>
-            </div>
+            <FileUpload
+              id="idDocument"
+              label="ID Document Upload"
+              required={true}
+              accept=".pdf,.jpg,.jpeg,.png"
+              value={formData.idDocument}
+              onChange={(file) => updateFormData("idDocument", file)}
+              description="PDF, JPG, PNG up to 5MB"
+            />
+            {errors.idDocument && (
+              <p className="text-red-400 text-sm flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                {errors.idDocument as any}
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -781,7 +851,7 @@ export function PatientForm() {
           <Shield className="h-5 w-5 text-blue-400" />
           <h3 className="text-xl font-semibold text-gray-100">Account Security</h3>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-2">
             <Label htmlFor="password" className="text-gray-200">Password *</Label>
@@ -962,27 +1032,32 @@ export function PatientForm() {
         </div>
 
         {/* Step Content */}
-        <Card className="bg-gray-900/40 backdrop-blur-lg border border-gray-800 shadow-xl rounded-2xl w-full">
-          <CardContent className="p-4 sm:p-6 lg:p-8">
-            <AnimatePresence mode="wait" initial={false}>
-              {currentStep === 0 && renderPersonalInformation()}
-              {currentStep === 1 && renderMedicalAndPrivacy()}
-              {currentStep === 2 && (
-                <motion.div
-                  initial={false}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                >
-                  <WalletConnection
-                    onWalletConnected={handleWalletConnected}
-                    onBack={handleBack}
-                    onComplete={handleComplete}
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </CardContent>
-        </Card>
+        <LoadingOverlay isLoading={isSubmitting} message={progressMessage}>
+          <Card className="bg-gray-900/40 backdrop-blur-lg border border-gray-800 shadow-xl rounded-2xl w-full">
+            <CardContent className="p-4 sm:p-6 lg:p-8">
+              <AnimatePresence mode="wait" initial={false}>
+                {currentStep === 0 && renderPersonalInformation()}
+                {currentStep === 1 && renderMedicalAndPrivacy()}
+                {currentStep === 2 && (
+                  <motion.div
+                    initial={false}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                  >
+                    <WalletConnection
+                      onWalletConnected={handleWalletConnected}
+                      onBack={handleBack}
+                      onComplete={handleComplete}
+                    />
+                    {registrationError && (
+                      <p className="mt-4 text-sm text-red-400">{registrationError}</p>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </CardContent>
+          </Card>
+        </LoadingOverlay>
 
         {/* Navigation */}
         {currentStep < 2 && (

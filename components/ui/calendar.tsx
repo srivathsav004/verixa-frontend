@@ -10,15 +10,24 @@ import { DayButton, DayPicker, getDefaultClassNames } from "react-day-picker"
 
 import { cn } from "@/lib/utils"
 import { Button, buttonVariants } from "@/components/ui/button"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 function Calendar({
   className,
   classNames,
   showOutsideDays = true,
-  captionLayout = "label",
+  captionLayout = "dropdown",
   buttonVariant = "ghost",
   formatters,
   components,
+  fromYear = 1900,
+  toYear = new Date().getFullYear(),
   ...props
 }: React.ComponentProps<typeof DayPicker> & {
   buttonVariant?: React.ComponentProps<typeof Button>["variant"]
@@ -28,16 +37,19 @@ function Calendar({
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
+      captionLayout={captionLayout}
+      fromYear={fromYear}
+      toYear={toYear}
       className={cn(
         "bg-background group/calendar p-3 [--cell-size:--spacing(8)] [[data-slot=card-content]_&]:bg-transparent [[data-slot=popover-content]_&]:bg-transparent",
-        String.raw`rtl:**:[.rdp-button\_next>svg]:rotate-180`,
-        String.raw`rtl:**:[.rdp-button\_previous>svg]:rotate-180`,
+        String.raw`rtl:**:[.rdp-button_next>svg]:rotate-180`,
+        String.raw`rtl:**:[.rdp-button_previous>svg]:rotate-180`,
         className
       )}
-      captionLayout={captionLayout}
       formatters={{
         formatMonthDropdown: (date) =>
           date.toLocaleString("default", { month: "short" }),
+        formatYearDropdown: (date) => date.getFullYear().toString(),
         ...formatters,
       }}
       classNames={{
@@ -68,14 +80,6 @@ function Calendar({
         dropdowns: cn(
           "w-full flex items-center text-sm font-medium justify-center h-(--cell-size) gap-1.5",
           defaultClassNames.dropdowns
-        ),
-        dropdown_root: cn(
-          "relative has-focus:border-ring border border-input shadow-xs has-focus:ring-ring/50 has-focus:ring-[3px] rounded-md",
-          defaultClassNames.dropdown_root
-        ),
-        dropdown: cn(
-          "absolute bg-popover inset-0 opacity-0",
-          defaultClassNames.dropdown
         ),
         caption_label: cn(
           "select-none font-medium",
@@ -125,46 +129,68 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        Root: ({ className, rootRef, ...props }) => {
-          return (
-            <div
-              data-slot="calendar"
-              ref={rootRef}
-              className={cn(className)}
-              {...props}
-            />
-          )
-        },
+        Root: ({ className, rootRef, ...props }) => (
+          <div
+            data-slot="calendar"
+            ref={rootRef}
+            className={cn(className)}
+            {...props}
+          />
+        ),
         Chevron: ({ className, orientation, ...props }) => {
           if (orientation === "left") {
-            return (
-              <ChevronLeftIcon className={cn("size-4", className)} {...props} />
-            )
+            return <ChevronLeftIcon className={cn("size-4", className)} {...props} />
           }
-
           if (orientation === "right") {
-            return (
-              <ChevronRightIcon
-                className={cn("size-4", className)}
-                {...props}
-              />
-            )
+            return <ChevronRightIcon className={cn("size-4", className)} {...props} />
           }
-
-          return (
-            <ChevronDownIcon className={cn("size-4", className)} {...props} />
-          )
+          return <ChevronDownIcon className={cn("size-4", className)} {...props} />
         },
         DayButton: CalendarDayButton,
-        WeekNumber: ({ children, ...props }) => {
-          return (
-            <td {...props}>
-              <div className="flex size-(--cell-size) items-center justify-center text-center">
-                {children}
-              </div>
-            </td>
-          )
-        },
+        WeekNumber: ({ children, ...props }) => (
+          <td {...props}>
+            <div className="flex size-(--cell-size) items-center justify-center text-center">
+              {children}
+            </div>
+          </td>
+        ),
+
+        // 👇 Custom Month + Year dropdowns using shadcn Select
+        MonthDropdown: ({ value, onChange, options }) => (
+          <Select
+            value={String(value)}
+            onValueChange={(val) => onChange?.(Number(val))}
+          >
+            <SelectTrigger className="h-8 w-24 bg-gray-800 border border-gray-600 text-gray-100">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-gray-800 text-gray-100 border border-gray-700">
+              {options.map((opt) => (
+                <SelectItem key={opt.value} value={String(opt.value)} className="text-gray-100 hover:bg-gray-700">
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ),
+        YearDropdown: ({ value, onChange, options }) => (
+          <Select
+            value={String(value)}
+            onValueChange={(val) => onChange?.(Number(val))}
+          >
+            <SelectTrigger className="h-8 w-24 bg-gray-800 border border-gray-600 text-gray-100">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-gray-800 text-gray-100 border border-gray-700 max-h-60">
+              {options.map((opt) => (
+                <SelectItem key={opt.value} value={String(opt.value)} className="text-gray-100 hover:bg-gray-700">
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ),
+
         ...components,
       }}
       {...props}
