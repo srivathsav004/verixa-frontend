@@ -482,7 +482,8 @@ export function InsuranceForm() {
           label="Company Logo"
           accept="image/*"
           maxSize={5}
-          onChange={(files) => updateFormData("companyLogo", Array.isArray(files) ? files[0] : files)}
+          value={formData.companyLogo}
+          onChange={(file) => updateFormData("companyLogo", file)}
           description="PNG, JPG up to 5MB"
         />
       </div>
@@ -668,7 +669,8 @@ export function InsuranceForm() {
               label="Insurance License"
               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
               maxSize={10}
-              onChange={(files) => updateFormData("insuranceLicense", Array.isArray(files) ? files[0] : files)}
+              value={formData.insuranceLicense}
+              onChange={(file) => updateFormData("insuranceLicense", file)}
               description="PDF, DOC, or image files up to 10MB"
             />
           </div>
@@ -679,7 +681,8 @@ export function InsuranceForm() {
               label="IRDAI Registration"
               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
               maxSize={10}
-              onChange={(files) => updateFormData("irdaiRegistration", Array.isArray(files) ? files[0] : files)}
+              value={formData.irdaiRegistration}
+              onChange={(file) => updateFormData("irdaiRegistration", file)}
               description="PDF, DOC, or image files up to 10MB"
             />
           </div>
@@ -690,7 +693,8 @@ export function InsuranceForm() {
               label="Business Registration"
               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
               maxSize={10}
-              onChange={(files) => updateFormData("businessRegistration", Array.isArray(files) ? files[0] : files)}
+              value={formData.businessRegistration}
+              onChange={(file) => updateFormData("businessRegistration", file)}
               description="PDF, DOC, or image files up to 10MB"
             />
           </div>
@@ -701,7 +705,8 @@ export function InsuranceForm() {
               label="Tax Registration"
               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
               maxSize={10}
-              onChange={(files) => updateFormData("taxRegistration", Array.isArray(files) ? files[0] : files)}
+              value={formData.taxRegistration}
+              onChange={(file) => updateFormData("taxRegistration", file)}
               description="PDF, DOC, or image files up to 10MB"
             />
           </div>
@@ -712,7 +717,8 @@ export function InsuranceForm() {
               label="Audited Financial Statements (Optional)"
               accept=".pdf,.doc,.docx"
               maxSize={15}
-              onChange={(files) => updateFormData("auditedFinancialStatements", Array.isArray(files) ? files[0] : files)}
+              value={formData.auditedFinancialStatements}
+              onChange={(file) => updateFormData("auditedFinancialStatements", file)}
               description="PDF or DOC files up to 15MB"
             />
           </div>
