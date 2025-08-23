@@ -148,6 +148,7 @@ export default function IssueNewDocument() {
         toast({
           title: "Report issued",
           description: `Report ID ${data.id} created successfully.`,
+          duration: 3500,
         });
       } catch {}
       // reset input and collapse form
