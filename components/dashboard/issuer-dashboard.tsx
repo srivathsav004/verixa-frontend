@@ -52,6 +52,20 @@ export function IssuerDashboard() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [view, setView] = useState<"dashboard" | "issue" | "history">("dashboard");
 
+  const handleLogout = () => {
+    try {
+      // Clear wallet cookie
+      document.cookie = "wallet_address=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
+      // Clear stored user id
+      try { window.localStorage.removeItem("user_id"); } catch {}
+      document.cookie = "user_id=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
+    } catch (e) {
+      console.error("Failed clearing wallet cookie", e);
+    }
+    // Go to login
+    window.location.href = "/login";
+  };
+
   // Mock async load
   useEffect(() => {
     const t = setTimeout(() => {
@@ -239,6 +253,7 @@ export function IssuerDashboard() {
                 <div className="ml-auto flex items-center gap-3">
                   <Badge variant="secondary">Live</Badge>
                   <Avatar className="h-8 w-8" />
+                  <Button size="sm" variant="outline" onClick={handleLogout}>Logout</Button>
                 </div>
               </div>
             </header>

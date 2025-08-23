@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,13 +26,9 @@ export default function ReportsHistory() {
   const [search, setSearch] = useState("");
   const [patientId, setPatientId] = useState<string>("");
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  // Minimal guard to avoid duplicate fetch in React Strict Mode (dev only)
-  const fetchedOnceRef = useRef(false);
   // Single fetch of all issued docs
   useEffect(() => {
     let ignore = false;
-    if (fetchedOnceRef.current) return;
-    fetchedOnceRef.current = true;
     const run = async () => {
       setLoading(true);
       try {

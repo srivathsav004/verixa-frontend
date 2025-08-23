@@ -23,6 +23,13 @@ export function LoginForm() {
     setLoading(true);
     try {
       const res = await UserService.login({ wallet_address: wallet.trim(), password });
+      // Persist user_id for subsequent API calls (issuer_id usage)
+      try {
+        if (res?.user_id != null) {
+          window.localStorage.setItem("user_id", String(res.user_id));
+          document.cookie = `user_id=${encodeURIComponent(String(res.user_id))}; path=/`;
+        }
+      } catch {}
       const role = res?.role?.toLowerCase?.() ?? "";
       if (role === "issuer") router.push("/dashboard/issuer");
       else if (role === "insurance") router.push("/dashboard/insurance");

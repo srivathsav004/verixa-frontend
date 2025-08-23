@@ -59,6 +59,15 @@ export function ValidatorDashboard() {
     return () => clearInterval(i);
   }, []);
 
+  const handleLogout = () => {
+    try {
+      document.cookie = "wallet_address=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
+    } catch (e) {
+      console.error("Failed clearing wallet cookie", e);
+    }
+    window.location.href = "/login";
+  };
+
   const available = 24 + (tick % 3);
   const accuracy = 96.4 + ((tick % 3) - 1) * 0.2;
   const earnedToday = 18.5 + (tick % 2) * 0.2;
@@ -198,6 +207,7 @@ export function ValidatorDashboard() {
                 <div className="ml-auto flex items-center gap-3">
                   <Badge variant="secondary">Pro</Badge>
                   <Avatar className="h-8 w-8" />
+                  <Button size="sm" variant="outline" onClick={handleLogout}>Logout</Button>
                 </div>
               </div>
             </header>

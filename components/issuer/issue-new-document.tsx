@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { FileUpload } from "@/components/ui/file-upload";
 import { config } from "@/lib/config";
+import { toast } from "@/hooks/use-toast";
 
 // Types aligned with backend /patients response
 type Patient = {
@@ -38,14 +39,29 @@ export default function IssueNewDocument() {
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const formRef = useRef<HTMLDivElement | null>(null);
   const [issuerId, setIssuerId] = useState<number | null>(null);
-  // Minimal guard to avoid duplicate fetch in React Strict Mode (dev only)
-  const fetchedOnceRef = useRef(false);
+
+  // Helpers to get/set user_id from storage/cookie
+  const getStoredUserId = (): number | null => {
+    try {
+      const fromLs = typeof window !== "undefined" ? window.localStorage.getItem("user_id") : null;
+      if (fromLs) return Number(fromLs);
+      const cookie = typeof document !== "undefined" ? document.cookie.split("; ").find(r=>r.startsWith("user_id=")) : null;
+      if (cookie) return Number(decodeURIComponent(cookie.split("=")[1]));
+    } catch {}
+    return null;
+  };
+  const setStoredUserId = (id: number) => {
+    try { if (typeof window !== "undefined") window.localStorage.setItem("user_id", String(id)); } catch {}
+    try { document.cookie = `user_id=${encodeURIComponent(String(id))}; path=/`; } catch {}
+  };
 
   // Single fetch for all patients; filter and paginate client-side
   useEffect(() => {
+    // Load any stored user id into state for immediate use
+    const cached = getStoredUserId();
+    if (cached) setIssuerId(cached);
+
     let ignore = false;
-    if (fetchedOnceRef.current) return;
-    fetchedOnceRef.current = true;
     const run = async () => {
       setLoading(true);
       try {
@@ -106,17 +122,8 @@ export default function IssueNewDocument() {
     setSubmitting(true);
     setToastMsg(null);
     try {
-      // Resolve user id by wallet only now
-      let resolvedIssuerId = issuerId;
-      const walletCookie = typeof document !== "undefined" ? document.cookie.split("; ").find(r=>r.startsWith("wallet_address=")) : null;
-      const wallet = walletCookie ? decodeURIComponent(walletCookie.split("=")[1]) : null;
-      if (!resolvedIssuerId && wallet) {
-        const resUser = await fetch(`${apiBase}/users/by-wallet?wallet_address=${encodeURIComponent(wallet)}`);
-        if (resUser.ok) {
-          const u = await resUser.json();
-          if (u?.user_id) resolvedIssuerId = Number(u.user_id);
-        }
-      }
+      // Use stored user_id only (no wallet-based API)
+      let resolvedIssuerId = issuerId ?? getStoredUserId();
       const fd = new FormData();
       // selected and file are guaranteed by isReady check above
       fd.set("patient_id", String(selected!.patient_id));
@@ -137,6 +144,12 @@ export default function IssueNewDocument() {
       }
       const data = await res.json();
       setToastMsg(`Report issued successfully (ID ${data.id}).`);
+      try {
+        toast({
+          title: "Report issued",
+          description: `Report ID ${data.id} created successfully.`,
+        });
+      } catch {}
       // reset input and collapse form
       setReportType("");
       setFile(null);
@@ -274,7 +287,7 @@ export default function IssueNewDocument() {
                     {!isReady && (
                       <div className="text-xs text-muted-foreground">Select patient, enter report type, and attach PDF</div>
                     )}
-                    {isReady && issuerId == null && (
+                    {isReady && (issuerId ?? getStoredUserId()) == null && (
                       <div className="text-xs text-amber-500">Issuer ID not found; please sign in</div>
                     )}
                     {toastMsg && <div className="text-xs text-muted-foreground">{toastMsg}</div>}
