@@ -350,20 +350,39 @@ export function PatientForm() {
             <Label htmlFor="dateOfBirth" className="text-gray-200">Date of Birth *</Label>
             <Popover>
               <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-full justify-between bg-gray-800/50 border-gray-600 text-gray-100 hover:bg-gray-800/60"
+                <div
+                  role="button"
+                  tabIndex={0}
+                  className={`
+                    relative w-full h-10 rounded-md pl-3 pr-10
+                    flex items-center text-left font-normal cursor-pointer
+                    bg-gray-800/50 border 
+                    ${errors.dateOfBirth ? "border-red-500 focus-visible:border-red-500" : "border-gray-600 focus-visible:border-blue-400"}
+                    ${formData.dateOfBirth ? "text-gray-100" : "text-gray-400"}
+                    hover:bg-gray-800/60 hover:border-gray-500
+                    focus-visible:outline-none 
+                    data-[state=open]:border-blue-400 data-[state=open]:bg-gray-800/60
+                    transition-colors
+                  `}
                 >
                   <span className="truncate">
                     {formData.dateOfBirth
                       ? new Date(formData.dateOfBirth).toLocaleDateString()
                       : "Select date"}
                   </span>
-                  <Calendar className="h-4 w-4 opacity-70" />
-                </Button>
+                  <Calendar className="h-4 w-4 text-gray-400 absolute right-3" />
+                </div>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
+              <PopoverContent className="w-auto p-0 bg-gray-800 border-gray-700 rounded-md shadow-lg" align="start">
                 <CalendarComponent
+                  className="text-gray-100"
+                  classNames={{
+                    caption_label: "text-gray-100 font-medium",
+                    weekdays: "grid grid-cols-7 w-full",
+                    weekday: "text-gray-300 font-medium text-[0.8rem] text-center",
+                    button_previous: "text-gray-100",
+                    button_next: "text-gray-100",
+                  }}
                   mode="single"
                   selected={formData.dateOfBirth ? new Date(formData.dateOfBirth) : undefined}
                   onSelect={(d) =>
