@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { FileUpload } from "@/components/ui/file-upload";
 import { config } from "@/lib/config";
 
 // Types aligned with backend /patients response
@@ -26,6 +28,7 @@ export default function IssueNewDocument() {
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
   const [total, setTotal] = useState(0);
+  const [allPatients, setAllPatients] = useState<Patient[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
 
   const [selected, setSelected] = useState<Patient | null>(null);
@@ -33,50 +36,96 @@ export default function IssueNewDocument() {
   const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const formRef = useRef<HTMLDivElement | null>(null);
+  const [issuerId, setIssuerId] = useState<number | null>(null);
+  // Minimal guard to avoid duplicate fetch in React Strict Mode (dev only)
+  const fetchedOnceRef = useRef(false);
 
+  // Single fetch for all patients; filter and paginate client-side
   useEffect(() => {
     let ignore = false;
-    const fetchPatients = async () => {
+    if (fetchedOnceRef.current) return;
+    fetchedOnceRef.current = true;
+    const run = async () => {
       setLoading(true);
       try {
-        const qp = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
-        if (search.trim()) qp.set("search", search.trim());
-        const res = await fetch(`${apiBase}/patients?${qp.toString()}`);
+        const res = await fetch(`${apiBase}/patients/fetch`);
         if (!res.ok) throw new Error(`Failed to fetch patients: ${res.status}`);
         const data = await res.json();
+        const items: Patient[] = data.items || [];
         if (!ignore) {
-          setPatients(data.items || []);
-          setTotal(data.total || 0);
+          setAllPatients(items);
         }
-      } catch (e: any) {
+      } catch (e) {
         console.error(e);
       } finally {
         if (!ignore) setLoading(false);
       }
     };
-    fetchPatients();
-    return () => {
-      ignore = true;
-    };
-  }, [apiBase, page, pageSize, search]);
+    run();
+    return () => { ignore = true; };
+  }, [apiBase]);
+
+  // derive filtered + paginated patients on search/page change
+  useEffect(() => {
+    const filtered = allPatients.filter(p => {
+      const term = search.trim().toLowerCase();
+      if (!term) return true;
+      return (
+        `${p.first_name} ${p.last_name}`.toLowerCase().includes(term) ||
+        (p.email || "").toLowerCase().includes(term) ||
+        (p.phone_number || "").includes(search.trim())
+      );
+    });
+    const newTotal = filtered.length;
+    const start = (page - 1) * pageSize;
+    const pageItems = filtered.slice(start, start + pageSize);
+    setPatients(pageItems);
+    setTotal(newTotal);
+  }, [allPatients, search, page, pageSize]);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
+  // Smooth scroll to the issue form after selecting a patient
+  useEffect(() => {
+    if (selected && formRef.current) {
+      formRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [selected]);
+
+  // Removed mount-time issuer lookup; we'll fetch user id only at submit time.
+
+  // Enable button when basic fields are set; issuer_id is validated in submit handler
+  const isReady = Boolean(selected && reportType.trim() && file);
+
   const onSubmit = async () => {
-    if (!selected || !reportType || !file) {
+    if (!isReady) {
       setToastMsg("Please select a patient, set report type, and choose a PDF file.");
       return;
     }
     setSubmitting(true);
     setToastMsg(null);
     try {
+      // Resolve user id by wallet only now
+      let resolvedIssuerId = issuerId;
+      const walletCookie = typeof document !== "undefined" ? document.cookie.split("; ").find(r=>r.startsWith("wallet_address=")) : null;
+      const wallet = walletCookie ? decodeURIComponent(walletCookie.split("=")[1]) : null;
+      if (!resolvedIssuerId && wallet) {
+        const resUser = await fetch(`${apiBase}/users/by-wallet?wallet_address=${encodeURIComponent(wallet)}`);
+        if (resUser.ok) {
+          const u = await resUser.json();
+          if (u?.user_id) resolvedIssuerId = Number(u.user_id);
+        }
+      }
       const fd = new FormData();
-      fd.set("patient_id", String(selected.patient_id));
+      // selected and file are guaranteed by isReady check above
+      fd.set("patient_id", String(selected!.patient_id));
       fd.set("report_type", reportType);
-      // TODO: replace with real issuer user id from auth/session
-      // For now leaving optional or example  issuer id
-      // fd.set("issuer_user_id", String(currentIssuerUserId));
-      fd.set("file", file);
+      if (!resolvedIssuerId) {
+        throw new Error("Missing issuer_id. Please sign in again.");
+      }
+      fd.set("issuer_id", String(resolvedIssuerId));
+      fd.set("file", file!);
 
       const res = await fetch(`${apiBase}/issuer/issued-docs`, {
         method: "POST",
@@ -88,9 +137,10 @@ export default function IssueNewDocument() {
       }
       const data = await res.json();
       setToastMsg(`Report issued successfully (ID ${data.id}).`);
-      // reset input
+      // reset input and collapse form
       setReportType("");
       setFile(null);
+      setSelected(null);
     } catch (e: any) {
       setToastMsg(e.message || "Failed to issue report");
     } finally {
@@ -165,23 +215,68 @@ export default function IssueNewDocument() {
           </div>
 
           {/* Issue form */}
-          <div className="mt-5 rounded-md border border-border p-4 bg-foreground/5">
-            <div className="text-sm font-medium">Issue Report</div>
+          <div ref={formRef} className="mt-5 rounded-lg border border-border p-4 sm:p-5 bg-foreground/5">
+            <div className="text-sm font-semibold tracking-wide">Issue Report</div>
             {!selected && (
               <div className="mt-2 text-sm text-muted-foreground">Select a patient to continue</div>
             )}
             {selected && (
-              <div className="mt-3 grid gap-4 sm:grid-cols-2">
-                <div>
-                  <div className="text-xs text-muted-foreground">Selected patient</div>
-                  <div className="mt-1 text-sm font-medium">{selected.first_name} {selected.last_name}</div>
-                  <div className="text-xs text-muted-foreground">{selected.email} • {selected.phone_number}</div>
+              <div className="mt-3 grid gap-5 sm:grid-cols-2">
+                {/* Selected patient pill */}
+                <div className="flex items-start gap-3">
+                  <div className="flex items-center gap-3 rounded-lg border border-border bg-background/40 px-3 py-2">
+                    <Avatar>
+                      <AvatarFallback>
+                        {(selected.first_name?.[0] || "").toUpperCase()}
+                        {(selected.last_name?.[0] || "").toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="leading-tight">
+                      <div className="text-sm font-medium">
+                        {selected.first_name} {selected.last_name}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {selected.email} • {selected.phone_number}
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelected(null)}
+                    className="ml-1"
+                  >
+                    Change
+                  </Button>
                 </div>
-                <div className="grid gap-2">
-                  <Input value={reportType} onChange={(e) => setReportType(e.target.value)} placeholder="Report type (e.g., Blood Test, MRI)" />
-                  <Input type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} />
-                  <div className="flex items-center gap-2">
-                    <Button disabled={submitting} onClick={onSubmit}>{submitting ? "Submitting..." : "Issue"}</Button>
+
+                {/* Form inputs */}
+                <div className="grid gap-3">
+                  <div className="grid gap-1.5">
+                    <label className="text-xs text-muted-foreground" htmlFor="reportType">Report type</label>
+                    <Input id="reportType" value={reportType} onChange={(e) => setReportType(e.target.value)} placeholder="e.g., Blood Test, MRI" />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <FileUpload
+                      id="reportFile"
+                      label="Attach PDF"
+                      accept="application/pdf"
+                      required
+                      value={file}
+                      onChange={(f) => setFile((Array.isArray(f) ? f[0] : f) || null)}
+                      description="Only PDF up to 5MB"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 pt-1">
+                    <Button disabled={submitting} onClick={onSubmit}>
+                      {submitting ? "Submitting..." : "Issue"}
+                    </Button>
+                    {!isReady && (
+                      <div className="text-xs text-muted-foreground">Select patient, enter report type, and attach PDF</div>
+                    )}
+                    {isReady && issuerId == null && (
+                      <div className="text-xs text-amber-500">Issuer ID not found; please sign in</div>
+                    )}
                     {toastMsg && <div className="text-xs text-muted-foreground">{toastMsg}</div>}
                   </div>
                 </div>
