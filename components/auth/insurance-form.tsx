@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Stepper } from "@/components/ui/stepper";
 import { WalletConnection } from "@/components/auth/wallet-connection";
+import { FileUpload } from "@/components/ui/file-upload";
 import { validateField, validatePassword, validateConfirmPassword } from "@/lib/validation";
 import { 
   Building2, 
@@ -411,19 +412,14 @@ export function InsuranceForm() {
       </div>
 
       <div className="space-y-3">
-        <Label htmlFor="companyLogo" className="text-gray-200">Company Logo</Label>
-        <div className="flex items-center justify-center w-full">
-          <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-600 border-dashed rounded-lg cursor-pointer bg-gray-800/30 hover:bg-gray-800/50 transition-colors">
-            <div className="flex flex-col items-center justify-center pt-5 pb-6">
-              <Upload className="w-8 h-8 mb-3 text-gray-400" />
-              <p className="mb-2 text-sm text-gray-400">
-                <span className="font-semibold">Click to upload</span> company logo
-              </p>
-              <p className="text-xs text-gray-500">PNG, JPG up to 5MB</p>
-            </div>
-            <input type="file" className="hidden" accept="image/*" />
-          </label>
-        </div>
+        <FileUpload
+          id="companyLogo"
+          label="Company Logo"
+          accept="image/*"
+          maxSize={5}
+          onChange={(files) => updateFormData("companyLogo", Array.isArray(files) ? files[0] : files)}
+          description="PNG, JPG up to 5MB"
+        />
       </div>
 
       <div className="border-t border-gray-700 pt-6">
@@ -589,6 +585,71 @@ export function InsuranceForm() {
                 {errors.phoneNumber}
               </p>
             )}
+          </div>
+        </div>
+      </div>
+
+      {/* Legal Documents */}
+      <div className="border-t border-gray-700 pt-6 space-y-8">
+        <div className="flex items-center space-x-3 pb-4 border-b border-gray-700">
+          <FileText className="h-5 w-5 text-blue-400" />
+          <h3 className="text-xl font-semibold text-gray-100">Legal Documents</h3>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="space-y-3">
+            <FileUpload
+              id="insuranceLicense"
+              label="Insurance License"
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+              maxSize={10}
+              onChange={(files) => updateFormData("insuranceLicense", Array.isArray(files) ? files[0] : files)}
+              description="PDF, DOC, or image files up to 10MB"
+            />
+          </div>
+
+          <div className="space-y-3">
+            <FileUpload
+              id="irdaiRegistration"
+              label="IRDAI Registration"
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+              maxSize={10}
+              onChange={(files) => updateFormData("irdaiRegistration", Array.isArray(files) ? files[0] : files)}
+              description="PDF, DOC, or image files up to 10MB"
+            />
+          </div>
+
+          <div className="space-y-3">
+            <FileUpload
+              id="businessRegistration"
+              label="Business Registration"
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+              maxSize={10}
+              onChange={(files) => updateFormData("businessRegistration", Array.isArray(files) ? files[0] : files)}
+              description="PDF, DOC, or image files up to 10MB"
+            />
+          </div>
+
+          <div className="space-y-3">
+            <FileUpload
+              id="taxRegistration"
+              label="Tax Registration"
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+              maxSize={10}
+              onChange={(files) => updateFormData("taxRegistration", Array.isArray(files) ? files[0] : files)}
+              description="PDF, DOC, or image files up to 10MB"
+            />
+          </div>
+
+          <div className="md:col-span-2 space-y-3">
+            <FileUpload
+              id="auditedFinancialStatements"
+              label="Audited Financial Statements (Optional)"
+              accept=".pdf,.doc,.docx"
+              maxSize={15}
+              onChange={(files) => updateFormData("auditedFinancialStatements", Array.isArray(files) ? files[0] : files)}
+              description="PDF or DOC files up to 15MB"
+            />
           </div>
         </div>
       </div>

@@ -12,7 +12,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Stepper } from "@/components/ui/stepper";
 import { WalletConnection } from "@/components/auth/wallet-connection";
+import { FileUpload } from "@/components/ui/file-upload";
 import { validateField, validatePassword, validateConfirmPassword } from "@/lib/validation";
+import { IssuerService, type IssuerDocumentsFiles } from "@/services/issuerService";
+import { LoadingOverlay } from "@/components/ui/loading-spinner";
 import { 
   Building2, 
   User, 
@@ -176,6 +179,8 @@ export function IssuerForm() {
 
   const [errors, setErrors] = useState<Partial<FormData>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [progressMessage, setProgressMessage] = useState("");
+  const [registrationError, setRegistrationError] = useState<string | null>(null);
 
   const updateFormData = (field: keyof FormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -263,15 +268,83 @@ export function IssuerForm() {
 
   const handleComplete = async () => {
     setIsSubmitting(true);
-    // Here you would typically submit the form data to your backend
-    console.log("Form data:", formData);
+    setRegistrationError(null);
+    setProgressMessage("Starting registration...");
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    setIsSubmitting(false);
-    // Redirect to login page after successful registration
-    window.location.href = "/login";
+    try {
+      // Ensure required files are present before proceeding
+      if (!formData.medicalLicense || !formData.businessRegistration || !formData.taxRegistration) {
+        setRegistrationError('Please upload all required documents (Medical License, Business Registration, Tax Registration).');
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Prepare the registration data
+      const registrationData = {
+        wallet_address: formData.walletAddress,
+        organization_name: formData.organizationName,
+        organization_type: formData.organizationType,
+        license_number: formData.licenseNumber,
+        registration_number: formData.registrationNumber,
+        established_year: parseInt(formData.establishedYear),
+        website_url: formData.websiteUrl,
+        contact_person_name: formData.contactPersonName,
+        designation: formData.designation,
+        phone_number: formData.phoneNumber,
+        alt_phone_number: formData.alternativePhone,
+        street_address: formData.streetAddress,
+        city: formData.city,
+        state: formData.state,
+        postal_code: formData.postalCode,
+        country: formData.country,
+        landmark: formData.landmark,
+        // stringify arrays/files for backend string fields
+        report_templates: JSON.stringify(
+          [formData.reportTemplates?.name].filter(Boolean)
+        ),
+        report_types: JSON.stringify(formData.reportTypes || []),
+        standard_font: formData.standardFont,
+        standard_font_size: parseInt(formData.standardFontSize) || 12,
+        logo_position: formData.logoPosition,
+        header_format: formData.headerFormat,
+        footer_format: formData.footerFormat,
+        normal_ranges: formData.normalRanges,
+        units_used: formData.unitsUsed,
+        reference_standards: formData.referenceStandards
+      };
+      
+      // Prepare the files with correct field names matching the service
+      const files: IssuerDocumentsFiles = {
+        // include optional only if present; required are asserted non-null above
+        ...(formData.organizationLogo ? { logo_file: formData.organizationLogo } : {}),
+        medical_license_certificate: formData.medicalLicense,
+        business_registration_certificate: formData.businessRegistration,
+        tax_registration_document: formData.taxRegistration,
+        ...(formData.accreditationCertificates ? { accreditation_certificates: formData.accreditationCertificates } : {}),
+      };
+      
+      // Call the complete registration service
+      const result = await IssuerService.completeRegistration(
+        registrationData,
+        files,
+        (message: string) => setProgressMessage(message)
+      );
+      
+      console.log('Registration successful:', result);
+      setProgressMessage("Registration completed successfully!");
+      
+      // Wait a moment to show success message, then redirect
+      setTimeout(() => {
+        window.location.href = "/login";
+      }, 2000);
+      
+    } catch (error: any) {
+      console.error('Registration failed:', error);
+      setRegistrationError(
+        error.message || 'Registration failed. Please try again.'
+      );
+      setIsSubmitting(false);
+    }
   };
 
   const renderBasicInformation = () => (
@@ -399,21 +472,14 @@ export function IssuerForm() {
           </div>
         </div>
 
-        <div className="space-y-3">
-          <Label className="text-gray-200">Organization Logo</Label>
-          <div className="flex items-center justify-center w-full">
-            <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-600 border-dashed rounded-lg cursor-pointer bg-gray-800/30 hover:bg-gray-800/50 transition-colors">
-              <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                <Upload className="w-8 h-8 mb-3 text-gray-400" />
-                <p className="mb-2 text-sm text-gray-400">
-                  <span className="font-semibold">Click to upload</span> organization logo
-                </p>
-                <p className="text-xs text-gray-500">PNG, JPG up to 5MB</p>
-              </div>
-              <input type="file" className="hidden" accept="image/*" />
-            </label>
-          </div>
-        </div>
+        <FileUpload
+          id="organizationLogo"
+          label="Organization Logo"
+          accept="image/*"
+          value={formData.organizationLogo}
+          onChange={(file) => updateFormData("organizationLogo", file)}
+          description="PNG, JPG up to 5MB"
+        />
       </div>
 
       {/* Contact Information Section */}
@@ -625,25 +691,42 @@ export function IssuerForm() {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {[
-            { id: "medicalLicense", label: "Medical License Certificate", required: true },
-            { id: "businessRegistration", label: "Business Registration Certificate", required: true },
-            { id: "taxRegistration", label: "Tax Registration Document", required: true },
-            { id: "accreditationCertificates", label: "Accreditation Certificates", required: false }
-          ].map(({ id, label, required }) => (
-            <div key={id} className="space-y-3">
-              <Label className="text-gray-200">{label} {required && "*"}</Label>
-              <div className="flex items-center justify-center w-full">
-                <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-gray-600 border-dashed rounded-lg cursor-pointer bg-gray-800/30 hover:bg-gray-800/50 transition-colors">
-                  <div className="flex flex-col items-center justify-center pt-2 pb-3">
-                    <Upload className="w-6 h-6 mb-2 text-gray-400" />
-                    <p className="text-xs text-gray-400">Upload PDF/Image</p>
-                  </div>
-                  <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png" />
-                </label>
-              </div>
-            </div>
-          ))}
+          <FileUpload
+            id="medicalLicense"
+            label="Medical License Certificate"
+            required={true}
+            accept=".pdf,.jpg,.jpeg,.png"
+            value={formData.medicalLicense}
+            onChange={(file) => updateFormData("medicalLicense", file)}
+            description="PDF, JPG, PNG up to 5MB"
+          />
+          <FileUpload
+            id="businessRegistration"
+            label="Business Registration Certificate"
+            required={true}
+            accept=".pdf,.jpg,.jpeg,.png"
+            value={formData.businessRegistration}
+            onChange={(file) => updateFormData("businessRegistration", file)}
+            description="PDF, JPG, PNG up to 5MB"
+          />
+          <FileUpload
+            id="taxRegistration"
+            label="Tax Registration Document"
+            required={true}
+            accept=".pdf,.jpg,.jpeg,.png"
+            value={formData.taxRegistration}
+            onChange={(file) => updateFormData("taxRegistration", file)}
+            description="PDF, JPG, PNG up to 5MB"
+          />
+          <FileUpload
+            id="accreditationCertificates"
+            label="Accreditation Certificates"
+            required={false}
+            accept=".pdf,.jpg,.jpeg,.png"
+            value={formData.accreditationCertificates}
+            onChange={(file) => updateFormData("accreditationCertificates", file)}
+            description="PDF, JPG, PNG up to 5MB"
+          />
         </div>
       </div>
 
@@ -740,21 +823,16 @@ export function IssuerForm() {
         </div>
         
         <div className="space-y-8">
-          <div className="space-y-3">
-            <Label className="text-gray-200">Upload Sample Report Templates *</Label>
-            <div className="flex items-center justify-center w-full">
-              <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-600 border-dashed rounded-lg cursor-pointer bg-gray-800/30 hover:bg-gray-800/50 transition-colors">
-                <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                  <Upload className="w-8 h-8 mb-3 text-gray-400" />
-                  <p className="mb-2 text-sm text-gray-400">
-                    <span className="font-semibold">Click to upload</span> report templates
-                  </p>
-                  <p className="text-xs text-gray-500">PDF format recommended</p>
-                </div>
-                <input type="file" className="hidden" accept=".pdf" multiple />
-              </label>
-            </div>
-          </div>
+          <FileUpload
+            id="reportTemplates"
+            label="Upload Sample Report Templates"
+            required={true}
+            accept=".pdf"
+            multiple={true}
+            value={formData.reportTemplates}
+            onChange={(file) => updateFormData("reportTemplates", file)}
+            description="PDF format recommended"
+          />
 
           <div className="space-y-3">
             <Label className="text-gray-200">Report Types Offered *</Label>
@@ -956,7 +1034,12 @@ export function IssuerForm() {
   );
 
   return (
-  <div className="min-h-screen bg-gradient-to-br from-gray-950 via-black to-gray-900 text-white">
+  <div className="min-h-screen bg-gradient-to-br from-gray-950 via-black to-gray-900 text-white relative">
+    {/* Loading Overlay */}
+    {isSubmitting && (
+      <LoadingOverlay message={progressMessage} />
+    )}
+    
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12 space-y-8 lg:space-y-12">
       
       {/* Header */}
@@ -991,6 +1074,16 @@ export function IssuerForm() {
                   onBack={handleBack}
                   onComplete={handleComplete}
                 />
+                
+                {/* Registration Error Display */}
+                {registrationError && (
+                  <Alert className="mt-4 border-red-600 bg-red-900/20">
+                    <AlertCircle className="h-4 w-4 text-red-400" />
+                    <AlertDescription className="text-red-300">
+                      {registrationError}
+                    </AlertDescription>
+                  </Alert>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -1019,6 +1112,5 @@ export function IssuerForm() {
     </div>
   </div>
 );
-
 
 }
