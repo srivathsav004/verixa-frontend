@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -20,10 +20,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
-import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { config } from "@/lib/config";
+import ClaimSubmit from "@/components/patient/claim-submit";
+import ClaimStatus from "@/components/patient/claim-status";
+import ClaimHistory from "@/components/patient/claim-history";
+import MedicalReports from "@/components/patient/medical-reports";
 import {
   LayoutDashboard,
   FolderHeart,
@@ -47,16 +51,55 @@ type RecordItem = {
   verified: "Platform Verified" | "AI Verified" | "Validator Verified" | "Pending";
 };
 
-type Claim = {
-  id: string;
-  title: string;
-  status: "Submitted" | "AI Analysis" | "Validator Review" | "Insurance Decision";
-  percent: number;
-};
-
 export function PatientDashboard() {
   const [loading, setLoading] = useState(true);
-  const [name] = useState("Alex");
+  const [fullName, setFullName] = useState<string>("");
+  const [active, setActive] = useState<
+    "dashboard" | "medical" | "claim-submit" | "claim-status" | "claim-history"
+  >("dashboard");
+  const [patientId, setPatientId] = useState<number | null>(null);
+  const api = useMemo(() => (config.apiBaseUrl || "http://127.0.0.1:8000") + "/api", []);
+  // views now render modular components; local claim form/state removed
+
+  // Helpers to read identifiers
+  const getStoredUserId = () => {
+    if (typeof window === "undefined") return null;
+    const val = window.localStorage.getItem("user_id");
+    if (val) return Number(val);
+    // fallback read from cookies if present
+    const m = document.cookie.match(/(?:^|; )user_id=([^;]+)/);
+    return m ? Number(decodeURIComponent(m[1])) : null;
+  };
+
+  type IssuedDoc = {
+    id: number;
+    patient_id: number;
+    report_type: string;
+    document_url: string;
+    issuer_id?: number | null;
+    created_at: string;
+  };
+
+  // moved to MedicalReports component
+
+  const handleLogout = () => {
+    try {
+      // Clear local storage
+      try { window.localStorage.removeItem("user_id"); } catch {}
+      try { window.localStorage.removeItem("patient_id"); } catch {}
+      // Expire cookies
+      const expire = "; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
+      document.cookie = "user_id=" + expire;
+      document.cookie = "role=" + expire;
+      document.cookie = "patient_user_id=" + expire;
+      document.cookie = "issuer_user_id=" + expire;
+      document.cookie = "insurance_user_id=" + expire;
+      document.cookie = "validator_user_id=" + expire;
+    } catch (e) {
+      console.error("Logout cleanup failed", e);
+    }
+    window.location.href = "/login";
+  };
 
   const records: RecordItem[] = [
     { id: "r1", type: "Blood Test", source: "Platform", org: "Verixa Lab", date: "2d ago", verified: "Platform Verified" },
@@ -64,15 +107,46 @@ export function PatientDashboard() {
     { id: "r3", type: "MRI Knee", source: "External", org: "Prime Imaging", date: "10d ago", verified: "Validator Verified" },
   ];
 
-  const claims: Claim[] = [
-    { id: "c1", title: "Diagnostic Tests", status: "AI Analysis", percent: 45 },
-    { id: "c2", title: "Emergency Visit", status: "Validator Review", percent: 72 },
-  ];
+  
 
+  // loading will be controlled by bootstrap and data fetches
+
+  // On every mount/refresh: map user_id -> patient_id and fetch name
   useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 600);
-    return () => clearTimeout(t);
-  }, []);
+    let ignore = false;
+    const bootstrap = async () => {
+      setLoading(true);
+      try {
+        const uid = getStoredUserId();
+        if (!uid) return;
+        // Fetch all patients and find current user's patient
+        const res = await fetch(`${api}/patients/fetch`);
+        if (!res.ok) throw new Error(`fetch patients failed: ${res.status}`);
+        const data = await res.json();
+        const me = (data?.items || []).find((p: any) => Number(p.user_id) === Number(uid));
+        if (!me) return;
+        if (ignore) return;
+        setPatientId(me.patient_id);
+        setFullName(`${me.first_name} ${me.last_name}`.trim());
+        // Store for potential reuse elsewhere
+        try { window.localStorage.setItem("patient_id", String(me.patient_id)); } catch {}
+      } catch (e) {
+        console.error("Failed to bootstrap patient info", e);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+    bootstrap();
+    return () => { ignore = true; };
+  }, [api]);
+
+  // medical docs loading handled by MedicalReports component
+
+  // claim submit handled inside ClaimSubmit component
+
+  // claim status/history handled in respective components
+
+  // submit logic moved into ClaimSubmit component
 
   const verifiedCount = records.filter(r => r.verified !== "Pending").length;
 
@@ -97,10 +171,10 @@ export function PatientDashboard() {
                 <SidebarGroupContent>
                   <SidebarMenu>
                     <SidebarMenuItem>
-                      <SidebarMenuButton className="justify-start"><LayoutDashboard /> <span>Dashboard</span></SidebarMenuButton>
+                      <SidebarMenuButton className="justify-start" isActive={active === "dashboard"} onClick={()=>setActive("dashboard")}><LayoutDashboard /> <span>Dashboard</span></SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
-                      <SidebarMenuButton className="justify-start"><FolderHeart /> <span>Medical Records</span></SidebarMenuButton>
+                      <SidebarMenuButton className="justify-start" isActive={active === "medical"} onClick={()=>setActive("medical")}><FolderHeart /> <span>Medical Reports</span></SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
                       <SidebarMenuButton className="justify-start"><Activity /> <span>Health Timeline</span></SidebarMenuButton>
@@ -114,16 +188,15 @@ export function PatientDashboard() {
                 <SidebarGroupContent>
                   <SidebarMenu>
                     <SidebarMenuItem>
-                      <SidebarMenuButton className="justify-start"><FileText /> <span>Submit Claims</span></SidebarMenuButton>
+                      <SidebarMenuButton className="justify-start" isActive={active === "claim-submit"} onClick={()=>setActive("claim-submit")}><FileText /> <span>Submit Claims</span></SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
-                      <SidebarMenuButton className="justify-start" isActive>
+                      <SidebarMenuButton className="justify-start" isActive={active === "claim-status"} onClick={()=>setActive("claim-status")}>
                         <ShieldCheck /> <span className="flex-1">Claim Status</span>
-                        <Badge className="ml-auto" variant="secondary">2</Badge>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
-                      <SidebarMenuButton className="justify-start"><BookOpenCheck /> <span>Claim History</span></SidebarMenuButton>
+                      <SidebarMenuButton className="justify-start" isActive={active === "claim-history"} onClick={()=>setActive("claim-history")}><BookOpenCheck /> <span>Claim History</span></SidebarMenuButton>
                     </SidebarMenuItem>
                   </SidebarMenu>
                 </SidebarGroupContent>
@@ -173,33 +246,37 @@ export function PatientDashboard() {
                 <div className="ml-auto flex items-center gap-3">
                   <Badge variant="secondary">Secure</Badge>
                   <Avatar className="h-8 w-8" />
+                  <Button size="sm" variant="outline" onClick={handleLogout}>Logout</Button>
                 </div>
               </div>
             </header>
 
             <main className="pl-4 pr-0 py-6 w-full max-w-full">
-              {/* Welcome / Stats */}
+              {/* Dashboard View */}
+              {active === "dashboard" && (
               <div className="grid gap-4 lg:grid-cols-3">
                 <Card className="lg:col-span-2 border-border bg-gradient-to-br from-foreground/5 to-transparent">
                   <CardHeader>
-                    <CardTitle className="text-xl">Welcome back, {name}</CardTitle>
+                    <CardTitle className="text-xl">
+                      {loading ? <Skeleton className="h-6 w-48 bg-foreground/10" /> : `Welcome back${fullName ? ", " + fullName : ""}`}
+                    </CardTitle>
                     <CardDescription>Your health overview and recent updates</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="grid gap-3 sm:grid-cols-3">
                       <div className="rounded-lg border border-border bg-foreground/5 p-3">
                         <div className="text-xs text-muted-foreground">Total Records</div>
-                        <div className="mt-1 text-2xl font-semibold">{records.length}</div>
+                        <div className="mt-1 text-2xl font-semibold">{loading ? <Skeleton className="h-6 w-12 bg-foreground/10" /> : records.length}</div>
                         <div className="mt-1 text-xs text-muted-foreground">{verifiedCount} verified</div>
                       </div>
                       <div className="rounded-lg border border-border bg-foreground/5 p-3">
                         <div className="text-xs text-muted-foreground">Active Claims</div>
-                        <div className="mt-1 text-2xl font-semibold">{claims.length}</div>
-                        <div className="mt-1 text-xs text-muted-foreground">With real-time tracking</div>
+                        <div className="mt-1 text-2xl font-semibold">{loading ? <Skeleton className="h-6 w-12 bg-foreground/10" /> : "—"}</div>
+                        <div className="mt-1 text-xs text-muted-foreground">View status for details</div>
                       </div>
                       <div className="rounded-lg border border-border bg-foreground/5 p-3">
                         <div className="text-xs text-muted-foreground">Recent Reports</div>
-                        <div className="mt-1 text-2xl font-semibold">{records.filter(r=>r.date.includes("d")).length}</div>
+                        <div className="mt-1 text-2xl font-semibold">{loading ? <Skeleton className="h-6 w-12 bg-foreground/10" /> : records.filter(r=>r.date.includes("d")).length}</div>
                         <div className="mt-1 text-xs text-muted-foreground">Last 30 days</div>
                       </div>
                     </div>
@@ -213,16 +290,17 @@ export function PatientDashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className="grid gap-2">
-                      <Button className="justify-start bg-foreground/10 text-foreground hover:bg-foreground/20"><FileCheck2 className="mr-2 h-4 w-4"/> Submit New Claim</Button>
+                      <Button className="justify-start bg-foreground/10 text-foreground hover:bg-foreground/20" onClick={()=>setActive("claim-submit")}><FileCheck2 className="mr-2 h-4 w-4"/> Submit New Claim</Button>
                       <Button className="justify-start bg-foreground/10 text-foreground hover:bg-foreground/20"><UploadCloud className="mr-2 h-4 w-4"/> Upload External Report</Button>
-                      <Button variant="secondary" className="justify-start"><FolderHeart className="mr-2 h-4 w-4"/> View All Records</Button>
+                      <Button variant="secondary" className="justify-start" onClick={()=>setActive("medical")}><FolderHeart className="mr-2 h-4 w-4"/> View All Records</Button>
                       <Button variant="outline" className="justify-start"><LifeBuoy className="mr-2 h-4 w-4"/> Emergency Access</Button>
                     </div>
                   </CardContent>
                 </Card>
               </div>
+              )}
 
-              {/* Timeline + Claims */}
+              {active === "dashboard" && (
               <div className="mt-6 grid gap-6 lg:grid-cols-3">
                 {/* Timeline (Aceternity-style simple) */}
                 <Card className="lg:col-span-2 border-border">
@@ -268,69 +346,45 @@ export function PatientDashboard() {
                   </CardContent>
                 </Card>
 
-                {/* Claims status */}
+                {/* Claims status CTA */}
                 <Card className="border-border">
                   <CardHeader>
                     <CardTitle>Insurance Claim Status</CardTitle>
-                    <CardDescription>Real-time verification progress</CardDescription>
+                    <CardDescription>Track your ongoing claims</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
-                      {claims.map((c) => (
-                        <div key={c.id} className="rounded-lg border border-border p-3 bg-foreground/5">
-                          <div className="flex items-center gap-2">
-                            <ShieldCheck className="h-4 w-4" />
-                            <div className="font-medium">{c.title}</div>
-                            <Badge className="ml-auto" variant="secondary">{c.status}</Badge>
-                          </div>
-                          <div className="mt-2">
-                            <Progress value={c.percent} />
-                            <div className="mt-1 text-xs text-muted-foreground">{c.percent}%</div>
-                          </div>
-                        </div>
-                      ))}
+                    <div className="flex items-center gap-3">
+                      <Button size="sm" onClick={()=>setActive("claim-status")}>
+                        <ShieldCheck className="mr-2 h-4 w-4" /> Open Claim Status
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={()=>setActive("claim-history")}>
+                        <BookOpenCheck className="mr-2 h-4 w-4" /> View History
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
               </div>
+              )}
 
-              {/* Records page preview (filters/search) */}
-              <Card className="mt-6 border-border">
-                <CardHeader>
-                  <CardTitle>Browse Medical Records</CardTitle>
-                  <CardDescription>Filters and quick search</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Tabs defaultValue="all">
-                    <TabsList>
-                      <TabsTrigger value="all">All</TabsTrigger>
-                      <TabsTrigger value="platform">Platform Issued</TabsTrigger>
-                      <TabsTrigger value="external">External</TabsTrigger>
-                      <TabsTrigger value="blood">Blood</TabsTrigger>
-                      <TabsTrigger value="xray">X-Ray</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="all" className="mt-4">
-                      <div className="grid gap-3 md:grid-cols-3">
-                        {[...records, ...records].slice(0,3).map((r, i) => (
-                          <div key={r.id+"-grid-"+i} className="rounded-lg border border-border bg-foreground/5 p-3">
-                            <div className="flex items-center gap-2 text-sm">
-                              <FolderHeart className="h-4 w-4" />
-                              <div className="font-medium">{r.type}</div>
-                              <Badge className="ml-auto" variant="secondary">{r.verified}</Badge>
-                            </div>
-                            <div className="mt-1 text-xs text-muted-foreground">{r.org} • {r.date}</div>
-                            <div className="mt-2 flex gap-2">
-                              <Button size="sm" variant="ghost">View</Button>
-                              <Button size="sm" variant="ghost">Download</Button>
-                              <Button size="sm" variant="ghost">Add to Claim</Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </TabsContent>
-                  </Tabs>
-                </CardContent>
-              </Card>
+              {/* Medical Reports view */}
+              {active === "medical" && (
+                patientId ? <MedicalReports patientId={patientId} /> : <Skeleton className="h-24 w-full bg-foreground/10" />
+              )}
+
+              {/* Claim Submit view */}
+              {active === "claim-submit" && (
+                patientId ? <ClaimSubmit patientId={patientId} /> : <Skeleton className="h-24 w-full bg-foreground/10" />
+              )}
+
+              {/* Claim Status view */}
+              {active === "claim-status" && (
+                patientId ? <ClaimStatus patientId={patientId} /> : <Skeleton className="h-24 w-full bg-foreground/10" />
+              )}
+
+              {/* Claim History view */}
+              {active === "claim-history" && (
+                patientId ? <ClaimHistory patientId={patientId} /> : <Skeleton className="h-24 w-full bg-foreground/10" />
+              )}
             </main>
           </SidebarInset>
         </div>
