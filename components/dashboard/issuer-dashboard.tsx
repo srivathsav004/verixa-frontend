@@ -54,11 +54,17 @@ export function IssuerDashboard() {
 
   const handleLogout = () => {
     try {
-      // Clear wallet cookie
-      document.cookie = "wallet_address=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
-      // Clear stored user id
+      // Clear local storage
       try { window.localStorage.removeItem("user_id"); } catch {}
-      document.cookie = "user_id=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
+      // Expire cookies
+      const expire = "; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
+      document.cookie = "wallet_address=" + expire;
+      document.cookie = "user_id=" + expire;
+      document.cookie = "role=" + expire;
+      document.cookie = "issuer_user_id=" + expire;
+      document.cookie = "patient_user_id=" + expire;
+      document.cookie = "insurance_user_id=" + expire;
+      document.cookie = "validator_user_id=" + expire;
     } catch (e) {
       console.error("Failed clearing wallet cookie", e);
     }

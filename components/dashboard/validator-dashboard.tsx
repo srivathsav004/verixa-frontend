@@ -61,7 +61,17 @@ export function ValidatorDashboard() {
 
   const handleLogout = () => {
     try {
-      document.cookie = "wallet_address=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
+      // Clear local storage
+      try { window.localStorage.removeItem("user_id"); } catch {}
+      // Expire cookies
+      const expire = "; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
+      document.cookie = "wallet_address=" + expire;
+      document.cookie = "user_id=" + expire;
+      document.cookie = "role=" + expire;
+      document.cookie = "issuer_user_id=" + expire;
+      document.cookie = "patient_user_id=" + expire;
+      document.cookie = "insurance_user_id=" + expire;
+      document.cookie = "validator_user_id=" + expire;
     } catch (e) {
       console.error("Failed clearing wallet cookie", e);
     }

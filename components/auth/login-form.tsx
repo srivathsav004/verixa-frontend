@@ -29,6 +29,14 @@ export function LoginForm() {
           window.localStorage.setItem("user_id", String(res.user_id));
           document.cookie = `user_id=${encodeURIComponent(String(res.user_id))}; path=/`;
         }
+        const role = res?.role?.toLowerCase?.();
+        if (role) {
+          // Set a role cookie and a role-specific user_id cookie for easy access in dashboards
+          document.cookie = `role=${encodeURIComponent(role)}; path=/`;
+          if (res?.user_id != null) {
+            document.cookie = `${encodeURIComponent(role)}_user_id=${encodeURIComponent(String(res.user_id))}; path=/`;
+          }
+        }
       } catch {}
       const role = res?.role?.toLowerCase?.() ?? "";
       if (role === "issuer") router.push("/dashboard/issuer");

@@ -69,6 +69,25 @@ export function InsuranceDashboard() {
 
   const validatorsActive = 18;
 
+  const handleLogout = () => {
+    try {
+      // Clear local storage
+      try { window.localStorage.removeItem("user_id"); } catch {}
+      // Expire cookies
+      const expire = "; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
+      document.cookie = "user_id=" + expire;
+      document.cookie = "role=" + expire;
+      document.cookie = "issuer_user_id=" + expire;
+      document.cookie = "patient_user_id=" + expire;
+      document.cookie = "insurance_user_id=" + expire;
+      document.cookie = "validator_user_id=" + expire;
+      document.cookie = "wallet_address=" + expire;
+    } catch (e) {
+      console.error("Logout cleanup failed", e);
+    }
+    window.location.href = "/login";
+  };
+
   return (
     <TooltipProvider>
       <SidebarProvider>
@@ -194,6 +213,7 @@ export function InsuranceDashboard() {
                 <div className="ml-auto flex items-center gap-3">
                   <Badge variant="secondary">Enterprise</Badge>
                   <Avatar className="h-8 w-8" />
+                  <Button size="sm" variant="outline" onClick={handleLogout}>Logout</Button>
                 </div>
               </div>
             </header>
@@ -396,4 +416,3 @@ export function InsuranceDashboard() {
     </TooltipProvider>
   );
 }
-
