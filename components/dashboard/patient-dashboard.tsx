@@ -51,6 +51,26 @@ type RecordItem = {
   verified: "Platform Verified" | "AI Verified" | "Validator Verified" | "Pending";
 };
 
+type Claim = {
+  claim_id: number;
+  patient_id: number;
+  insurance_id: number;
+  report_url: string;
+  is_verified: boolean;
+  issued_by: number | null;
+  status: string;
+  created_at: string;
+};
+
+type IssuedDoc = {
+  id: number;
+  patient_id: number;
+  report_type: string;
+  document_url: string;
+  issuer_id?: number | null;
+  created_at: string;
+};
+
 export function PatientDashboard() {
   const [loading, setLoading] = useState(true);
   const [fullName, setFullName] = useState<string>("");
@@ -71,16 +91,9 @@ export function PatientDashboard() {
     return m ? Number(decodeURIComponent(m[1])) : null;
   };
 
-  type IssuedDoc = {
-    id: number;
-    patient_id: number;
-    report_type: string;
-    document_url: string;
-    issuer_id?: number | null;
-    created_at: string;
-  };
-
-  // moved to MedicalReports component
+  const [issuedDocs, setIssuedDocs] = useState<IssuedDoc[]>([]);
+  const [claims, setClaims] = useState<Claim[]>([]);
+  const [statsLoading, setStatsLoading] = useState(false);
 
   const handleLogout = () => {
     try {
@@ -101,13 +114,43 @@ export function PatientDashboard() {
     window.location.href = "/login";
   };
 
-  const records: RecordItem[] = [
-    { id: "r1", type: "Blood Test", source: "Platform", org: "Verixa Lab", date: "2d ago", verified: "Platform Verified" },
-    { id: "r2", type: "X-Ray Chest", source: "External", org: "City Hospital", date: "5d ago", verified: "AI Verified" },
-    { id: "r3", type: "MRI Knee", source: "External", org: "Prime Imaging", date: "10d ago", verified: "Validator Verified" },
-  ];
+  useEffect(() => {
+    if (!patientId) return;
+    let ignore = false;
+    const load = async () => {
+      setStatsLoading(true);
+      try {
+        const [dRes, cRes] = await Promise.all([
+          fetch(`${api}/issuer/issued-docs/by-patient/${patientId}`),
+          fetch(`${api}/claims/by-patient/${patientId}`),
+        ]);
+        if (dRes.ok) {
+          const dj = await dRes.json();
+          if (!ignore) setIssuedDocs(dj.items || []);
+        }
+        if (cRes.ok) {
+          const cj = await cRes.json();
+          if (!ignore) setClaims(cj.items || []);
+        }
+      } catch (e) {
+        console.error("Failed to load dashboard stats", e);
+      } finally {
+        if (!ignore) setStatsLoading(false);
+      }
+    };
+    load();
+    return () => { ignore = true; };
+  }, [patientId, api]);
 
-  
+  const totalRecords = issuedDocs.length;
+  const verifiedRecords = issuedDocs.filter(d => d.issuer_id != null).length; // platform-issued
+  const activeClaimsApproved = claims.filter(c => (c.status || "").toLowerCase().includes("approved")).length;
+  const recent30Days = issuedDocs.filter(d => {
+    const dt = new Date(d.created_at).getTime();
+    return Date.now() - dt <= 30 * 24 * 60 * 60 * 1000;
+  }).length;
+  const latestIssued = [...issuedDocs].sort((a,b)=> new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0,3);
+  const latestClaims = [...claims].sort((a,b)=> new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0,4);
 
   // loading will be controlled by bootstrap and data fetches
 
@@ -148,7 +191,13 @@ export function PatientDashboard() {
 
   // submit logic moved into ClaimSubmit component
 
-  const verifiedCount = records.filter(r => r.verified !== "Pending").length;
+  const prettyDate = (iso: string) => { try { return new Date(iso).toLocaleDateString(); } catch { return iso; } };
+  const statusVariant = (s: string): "default" | "secondary" | "destructive" | "outline" => {
+    const v = (s||"").toLowerCase();
+    if (v.includes("approve")) return "secondary";
+    if (v.includes("reject") || v.includes("cancel")) return "destructive";
+    return "default";
+  };
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -266,17 +315,17 @@ export function PatientDashboard() {
                     <div className="grid gap-3 sm:grid-cols-3">
                       <div className="rounded-lg border border-border bg-foreground/5 p-3">
                         <div className="text-xs text-muted-foreground">Total Records</div>
-                        <div className="mt-1 text-2xl font-semibold">{loading ? <Skeleton className="h-6 w-12 bg-foreground/10" /> : records.length}</div>
-                        <div className="mt-1 text-xs text-muted-foreground">{verifiedCount} verified</div>
+                        <div className="mt-1 text-2xl font-semibold">{loading || statsLoading ? <Skeleton className="h-6 w-12 bg-foreground/10" /> : totalRecords}</div>
+                        <div className="mt-1 text-xs text-muted-foreground">{loading || statsLoading ? <Skeleton className="h-4 w-20 bg-foreground/10" /> : `${verifiedRecords} verified (platform)`}</div>
                       </div>
                       <div className="rounded-lg border border-border bg-foreground/5 p-3">
-                        <div className="text-xs text-muted-foreground">Active Claims</div>
-                        <div className="mt-1 text-2xl font-semibold">{loading ? <Skeleton className="h-6 w-12 bg-foreground/10" /> : "—"}</div>
-                        <div className="mt-1 text-xs text-muted-foreground">View status for details</div>
+                        <div className="text-xs text-muted-foreground">Active Claims (Approved)</div>
+                        <div className="mt-1 text-2xl font-semibold">{loading || statsLoading ? <Skeleton className="h-6 w-12 bg-foreground/10" /> : activeClaimsApproved}</div>
+                        <div className="mt-1 text-xs text-muted-foreground">Total approved claims</div>
                       </div>
                       <div className="rounded-lg border border-border bg-foreground/5 p-3">
                         <div className="text-xs text-muted-foreground">Recent Reports</div>
-                        <div className="mt-1 text-2xl font-semibold">{loading ? <Skeleton className="h-6 w-12 bg-foreground/10" /> : records.filter(r=>r.date.includes("d")).length}</div>
+                        <div className="mt-1 text-2xl font-semibold">{loading || statsLoading ? <Skeleton className="h-6 w-12 bg-foreground/10" /> : recent30Days}</div>
                         <div className="mt-1 text-xs text-muted-foreground">Last 30 days</div>
                       </div>
                     </div>
@@ -302,41 +351,35 @@ export function PatientDashboard() {
 
               {active === "dashboard" && (
               <div className="mt-6 grid gap-6 lg:grid-cols-3">
-                {/* Timeline (Aceternity-style simple) */}
+                {/* Recent Medical Records: latest issued docs */}
                 <Card className="lg:col-span-2 border-border">
                   <CardHeader>
                     <CardTitle>Recent Medical Records</CardTitle>
-                    <CardDescription>Chronological updates</CardDescription>
+                    <CardDescription>Latest issued documents from our platform</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="relative">
                       <div className="absolute left-3 top-0 bottom-0 w-px bg-border" />
                       <div className="space-y-5">
-                        {loading && (
+                        {(loading || statsLoading) && (
                           <>
                             <Skeleton className="h-14 w-full bg-foreground/10" />
                             <Skeleton className="h-14 w-11/12 bg-foreground/10" />
                             <Skeleton className="h-14 w-10/12 bg-foreground/10" />
                           </>
                         )}
-                        {!loading && records.map((r) => (
-                          <div key={r.id} className="relative pl-8">
+                        {!loading && !statsLoading && latestIssued.map((d) => (
+                          <div key={d.id} className="relative pl-8">
                             <div className="absolute left-0 top-2 h-3 w-3 rounded-full bg-foreground" />
                             <div className="rounded-lg border border-border bg-foreground/5 p-3">
                               <div className="flex items-center gap-2 text-sm">
                                 <FolderHeart className="h-4 w-4" />
-                                <div className="font-medium">{r.type}</div>
-                                <div className="ml-auto text-xs text-muted-foreground">{r.date}</div>
+                                <div className="font-medium">{d.report_type}</div>
+                                <div className="ml-auto text-xs text-muted-foreground">{prettyDate(d.created_at)}</div>
                               </div>
-                              <div className="mt-1 text-xs text-muted-foreground">{r.org} • {r.source}</div>
+                              <div className="mt-1 text-xs text-muted-foreground">Platform Issued {d.issuer_id ? `• Issuer #${d.issuer_id}` : ""}</div>
                               <div className="mt-2 flex items-center gap-2">
-                                <Badge variant={
-                                  r.verified === "Platform Verified" ? "secondary" :
-                                  r.verified === "AI Verified" ? "default" :
-                                  r.verified === "Validator Verified" ? "outline" : "secondary"
-                                }>{r.verified}</Badge>
-                                <Button size="sm" variant="ghost" className="ml-auto">Download</Button>
-                                <Button size="sm" variant="ghost">Share</Button>
+                                <a className="text-xs text-primary hover:underline" href={d.document_url} target="_blank" rel="noopener noreferrer">Preview</a>
                               </div>
                             </div>
                           </div>
@@ -346,21 +389,46 @@ export function PatientDashboard() {
                   </CardContent>
                 </Card>
 
-                {/* Claims status CTA */}
+                {/* Claims status snapshot */}
                 <Card className="border-border">
                   <CardHeader>
                     <CardTitle>Insurance Claim Status</CardTitle>
-                    <CardDescription>Track your ongoing claims</CardDescription>
+                    <CardDescription>Latest updates</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-center gap-3">
-                      <Button size="sm" onClick={()=>setActive("claim-status")}>
-                        <ShieldCheck className="mr-2 h-4 w-4" /> Open Claim Status
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={()=>setActive("claim-history")}>
-                        <BookOpenCheck className="mr-2 h-4 w-4" /> View History
-                      </Button>
-                    </div>
+                    {(loading || statsLoading) ? (
+                      <div className="space-y-2">
+                        <Skeleton className="h-10 w-full bg-foreground/10" />
+                        <Skeleton className="h-10 w-11/12 bg-foreground/10" />
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {latestClaims.length === 0 && (
+                          <div className="text-sm text-muted-foreground">No recent claims.</div>
+                        )}
+                        {latestClaims.map((c) => (
+                          <div key={c.claim_id} className="rounded-lg border border-border p-3 bg-foreground/5">
+                            <div className="flex items-center gap-2 text-sm">
+                              <ShieldCheck className="h-4 w-4" />
+                              <div className="font-medium">Claim #{c.claim_id}</div>
+                              <Badge className="ml-auto" variant={statusVariant(c.status)}>{c.status}</Badge>
+                            </div>
+                            <div className="mt-1 text-xs text-muted-foreground flex items-center justify-between">
+                              <span>{prettyDate(c.created_at)}</span>
+                              {c.report_url && <a className="text-primary hover:underline" href={c.report_url} target="_blank" rel="noopener noreferrer">Preview</a>}
+                            </div>
+                          </div>
+                        ))}
+                        <div className="flex items-center gap-3 pt-1">
+                          <Button size="sm" onClick={()=>setActive("claim-status")}>
+                            <ShieldCheck className="mr-2 h-4 w-4" /> Open Claim Status
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={()=>setActive("claim-history")}>
+                            <BookOpenCheck className="mr-2 h-4 w-4" /> View History
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
