@@ -44,21 +44,21 @@ export function LoginForm() {
   };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-      <Card className="w-full max-w-md bg-gray-900/50 border-gray-800 text-white">
-        <CardHeader>
-          <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">Welcome Back</CardTitle>
-          <CardDescription className="text-center text-gray-400 pt-2">Enter your wallet address and password to access your account.</CardDescription>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }} className="w-full max-w-sm mx-auto">
+      <Card className="w-full">
+        <CardHeader className="space-y-1 text-center">
+          <CardTitle className="text-xl font-semibold tracking-tight no-underline">Welcome Back</CardTitle>
+          <CardDescription>Enter your wallet address and password to access your account.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={onSubmit} className="space-y-6">
+          <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="wallet">Wallet Address</Label>
               <Input
                 id="wallet"
                 type="text"
                 placeholder="0x..."
-                className="bg-gray-800 border-gray-700"
+                autoComplete="username"
                 value={wallet}
                 onChange={(e) => setWallet(e.target.value)}
                 required
@@ -70,19 +70,19 @@ export function LoginForm() {
                 id="password"
                 type="password"
                 placeholder="********"
-                className="bg-gray-800 border-gray-700"
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
             </div>
-            {error && <p className="text-red-400 text-sm">{error}</p>}
-            <Button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold">
+            {error && <p className="text-destructive text-sm">{error}</p>}
+            <Button type="submit" variant="default" disabled={loading} className="w-full">
               {loading ? "Logging in..." : "Login"}
             </Button>
-            <p className="text-center text-sm text-gray-500">
+            <p className="text-center text-sm text-muted-foreground">
               First time here?{" "}
-              <Link href="/role-selection" className="text-blue-400 hover:underline">
+              <Link href="/role-selection" className="text-primary hover:underline">
                 Register now
               </Link>
             </p>
