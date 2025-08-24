@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { config } from "@/lib/config";
 import { toast } from "@/hooks/use-toast";
+import { FileUpload } from "@/components/ui/file-upload";
 
 export type IssuedDoc = {
   id: number;
@@ -342,34 +343,43 @@ export default function ClaimSubmit({ patientId }: { patientId: number }) {
               {/* If no active docs, allow unverified upload below */}
               {!hasActiveDocs && (
                 <div className="mt-3">
-                  <div className="text-sm mb-1">Or upload an unverified report</div>
-                  <input
-                    type="file"
-                    accept="application/pdf,image/*"
-                    onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                  <FileUpload
+                    id="claim-upload-locked"
+                    label="Or upload an unverified report"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    value={uploadFile}
+                    onChange={(f) => setUploadFile((f as File) || null)}
+                    maxSize={10}
+                    description="PDF or Image up to 10MB"
                   />
                   <div className="text-xs text-muted-foreground mt-1">All issued documents are locked; you can upload a new report to submit as unverified.</div>
                 </div>
               )}
               {hasActiveDocs && (
                 <div className="mt-3">
-                  <div className="text-xs text-muted-foreground">Prefer uploading instead? Leave the selection empty and attach a file below.</div>
-                  <input
-                    className="mt-1"
-                    type="file"
-                    accept="application/pdf,image/*"
-                    onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                  <div className="text-xs text-muted-foreground mb-1">Prefer uploading instead? Leave the selection empty and attach a file below.</div>
+                  <FileUpload
+                    id="claim-upload-alt"
+                    label="Upload report instead of selecting"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    value={uploadFile}
+                    onChange={(f) => setUploadFile((f as File) || null)}
+                    maxSize={10}
+                    description="PDF or Image up to 10MB"
                   />
                 </div>
               )}
             </div>
           ) : (
             <div>
-              <div className="text-sm mb-1">Upload your report (no issued documents found)</div>
-              <input
-                type="file"
-                accept="application/pdf,image/*"
-                onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+              <FileUpload
+                id="claim-upload-empty"
+                label="Upload your report (no issued documents found)"
+                accept=".pdf,.jpg,.jpeg,.png"
+                value={uploadFile}
+                onChange={(f) => setUploadFile((f as File) || null)}
+                maxSize={10}
+                description="PDF or Image up to 10MB"
               />
             </div>
           )}
