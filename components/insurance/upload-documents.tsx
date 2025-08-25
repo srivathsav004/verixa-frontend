@@ -15,6 +15,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
 import { config } from "@/lib/config";
 
 export type UploadDocumentsProps = { insuranceId: number };
@@ -64,6 +65,8 @@ export default function UploadDocuments({ insuranceId }: UploadDocumentsProps) {
   // selection and AI scores
   const [selected, setSelected] = useState<Record<number, boolean>>({});
   const [aiScores, setAiScores] = useState<Record<number, number>>({});
+  const [patientNames, setPatientNames] = useState<Record<number, string>>({});
+  const [bucketFilter, setBucketFilter] = useState<"all" | "auto" | "manual" | "reject">("all");
 
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const start = total === 0 ? 0 : (page - 1) * pageSize + 1;
@@ -97,9 +100,13 @@ export default function UploadDocuments({ insuranceId }: UploadDocumentsProps) {
       setTotal(j.total || 0);
       // clear selection for non-visible
       setSelected({});
+      // prefetch patient names for current page
+      prefetchPatientNames(j.items || []);
+      // preload existing AI evaluations for current page
+      await loadAIEvals(j.items || []);
     } catch (e) {
       console.error(e);
-      toast({ title: "Fetch failed", description: "Unable to load claims.", variant: "destructive" });
+      toast({ title: "Could not load claims", description: "Please retry in a moment.", /* neutral styling */ variant: "default", className: "bg-muted text-foreground" });
     } finally {
       setLoading(false);
     }
@@ -111,28 +118,8 @@ export default function UploadDocuments({ insuranceId }: UploadDocumentsProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [insuranceId, page, pageSize, search]);
 
-  const handleToggleAll = (checked: boolean) => {
-    const pageIds = items.map((i) => i.claim_id);
-    const next: Record<number, boolean> = { ...selected };
-    pageIds.forEach((id) => (next[id] = checked));
-    setSelected(next);
-  };
-
-  const handleToggle = (id: number, checked: boolean) => setSelected((s) => ({ ...s, [id]: checked }));
-
-  const generateScores = () => {
-    const selIds = Object.entries(selected).filter(([, v]) => v).map(([k]) => Number(k));
-    if (selIds.length === 0) {
-      toast({ title: "No selection", description: "Select at least one claim.", variant: "destructive" });
-      return;
-    }
-    const next: Record<number, number> = { ...aiScores };
-    selIds.forEach((id) => (next[id] = Math.floor(Math.random() * 101)));
-    setAiScores(next);
-    toast({ title: "AI scores generated", description: `Generated scores for ${selIds.length} claim(s).` });
-  };
-
-  const bucket = (score: number | undefined) => {
+  // hoisted bucket helper so it's available before useMemo below
+  function bucket(score: number | undefined) {
     if (!thresholds || score == null) return "unscored" as const;
     const { auto_approval_threshold: autoT, manual_review_threshold: manualT, rejection_threshold: rejectT } = thresholds;
     // Treat undefined thresholds safely; fall back to typical ordering: reject < manual < auto.
@@ -143,23 +130,105 @@ export default function UploadDocuments({ insuranceId }: UploadDocumentsProps) {
     if (score < r) return "reject" as const;
     if (score >= r && score < m) return "manual" as const;
     return "manual" as const; // between manual and auto -> manual
+  }
+
+  // filter rows per selected bucket (placed before references)
+  const filteredItems = useMemo(() => {
+    if (bucketFilter === "all") return items;
+    return items.filter((r) => {
+      const s = aiScores[r.claim_id];
+      const b = bucket(s);
+      return b === bucketFilter;
+    });
+  }, [items, aiScores, bucketFilter, thresholds]);
+
+  const handleToggleAll = (checked: boolean) => {
+    const pageIds = filteredItems.map((i) => i.claim_id);
+    const next: Record<number, boolean> = { ...selected };
+    pageIds.forEach((id) => (next[id] = checked));
+    setSelected(next);
   };
+
+  const handleToggle = (id: number, checked: boolean) => setSelected((s) => ({ ...s, [id]: checked }));
+
+  // Load AI evals for current rows from backend so refresh preserves scores
+  const loadAIEvals = async (rows: ClaimItem[]) => {
+    const ids = rows.map((r) => r.claim_id);
+    if (!ids.length) return;
+    try {
+      const res = await fetch(`${api}/claims/ai-evaluations/query`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ claim_ids: ids }),
+      });
+      if (!res.ok) return;
+      const evals: Array<{ claim_id: number; ai_score: number; bucket?: string; evaluated_at: string }> = await res.json();
+      const map: Record<number, number> = {};
+      evals.forEach((e) => { map[e.claim_id] = e.ai_score; });
+      setAiScores((prev) => ({ ...prev, ...map }));
+    } catch (err) {
+      console.warn("ai eval preload failed", err);
+    }
+  };
+
+  const generateScores = async () => {
+    const selIds = Object.entries(selected).filter(([, v]) => v).map(([k]) => Number(k));
+    if (selIds.length === 0) {
+      toast({ title: "Select claims first", description: "Pick one or more rows to score.", variant: "default", className: "bg-muted text-foreground" });
+      return;
+    }
+    // Only generate for claims that don't already have a saved score
+    const toGenerate = selIds.filter((id) => aiScores[id] == null);
+    if (toGenerate.length === 0) {
+      toast({ title: "Already scored", description: "Selected claims already have AI scores.", variant: "default", className: "bg-muted text-foreground" });
+      return;
+    }
+    const next: Record<number, number> = { ...aiScores };
+    toGenerate.forEach((id) => (next[id] = Math.floor(Math.random() * 101)));
+    setAiScores(next);
+    // auto-persist to backend
+    try {
+      const evaluations = toGenerate.map((id) => {
+        const claim = items.find((i) => i.claim_id === id);
+        const b = bucket(next[id]);
+        return {
+          claim_id: id,
+          report_type: undefined,
+          document_url: claim?.report_url,
+          ai_score: next[id],
+          bucket: b === "unscored" ? undefined : b,
+        };
+      });
+      const res = await fetch(`${api}/claims/ai-evaluations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ evaluations }),
+      });
+      if (!res.ok) throw new Error("persist failed");
+      toast({ title: "AI scores saved", description: `Generated and saved for ${toGenerate.length} claim(s).` });
+    } catch (e) {
+      console.error(e);
+      toast({ title: "Save failed", description: "Scores generated locally but not saved.", variant: "destructive" });
+    }
+  };
+
+  // bucket defined above as a function declaration
 
   const approveSelected = async () => {
     const ids = Object.entries(selected).filter(([, v]) => v).map(([k]) => Number(k));
     if (ids.length === 0) return toast({ title: "No selection", description: "Select claims to approve.", variant: "destructive" });
     try {
-      const res = await fetch(`${api}/claims/bulk-verify-approve`, {
+      const res = await fetch(`${api}/claims/bulk-set-verified`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ claim_ids: ids }),
       });
       if (!res.ok) throw new Error("approve failed");
-      toast({ title: "Approved", description: `Approved ${ids.length} claim(s)` });
+      toast({ title: "Marked Verified", description: `Set verified for ${ids.length} claim(s)` });
       fetchClaims();
     } catch (e) {
       console.error(e);
-      toast({ title: "Approve failed", description: "Try again.", variant: "destructive" });
+      toast({ title: "Verification update failed", description: "Please try again.", variant: "destructive" });
     }
   };
 
@@ -177,34 +246,43 @@ export default function UploadDocuments({ insuranceId }: UploadDocumentsProps) {
       fetchClaims();
     } catch (e) {
       console.error(e);
-      toast({ title: "Reject failed", description: "Try again.", variant: "destructive" });
+      toast({ title: "Reject failed", description: "Please try again.", variant: "destructive" });
     }
   };
 
-  const saveEvaluations = async () => {
-    const evals = Object.entries(aiScores).map(([claimId, score]) => {
-      const claim = items.find((i) => i.claim_id === Number(claimId));
-      return {
-        claim_id: Number(claimId),
-        report_type: undefined,
-        document_url: claim?.report_url ?? undefined,
-        ai_score: score,
-      };
-    });
-    if (evals.length === 0) return toast({ title: "No scores", description: "Generate AI scores first.", variant: "destructive" });
+  // Helpers used by Apply button for bucket actions
+  const approveIds = async (ids: number[]) => {
     try {
-      const res = await fetch(`${api}/claims/ai-evaluations`, {
+      const res = await fetch(`${api}/claims/bulk-set-verified`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ evaluations: evals }),
+        body: JSON.stringify({ claim_ids: ids }),
       });
-      if (!res.ok) throw new Error("save failed");
-      toast({ title: "Saved", description: `Saved ${evals.length} evaluation(s).` });
+      if (!res.ok) throw new Error("approve failed");
+      toast({ title: "Marked Verified", description: `Set verified for ${ids.length} claim(s)` });
+      fetchClaims();
     } catch (e) {
       console.error(e);
-      toast({ title: "Save failed", description: "Unable to store evaluations.", variant: "destructive" });
+      toast({ title: "Verification update failed", description: "Please try again.", variant: "destructive" });
     }
   };
+
+  const rejectIds = async (ids: number[]) => {
+    try {
+      const res = await fetch(`${api}/claims/bulk-status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ claim_ids: ids, status: "rejected" }),
+      });
+      if (!res.ok) throw new Error("reject failed");
+      toast({ title: "Rejected", description: `Rejected ${ids.length} claim(s)` });
+      fetchClaims();
+    } catch (e) {
+      console.error(e);
+      toast({ title: "Reject failed", description: "Please try again.", variant: "destructive" });
+    }
+  };
+
 
   const pageNumbers = useMemo(() => {
     const maxButtons = 5;
@@ -223,7 +301,47 @@ export default function UploadDocuments({ insuranceId }: UploadDocumentsProps) {
     return pages;
   }, [page, pageCount]);
 
-  const allOnPageChecked = items.every((i) => selected[i.claim_id]);
+const allOnPageChecked = filteredItems.length > 0 && filteredItems.every((i) => selected[i.claim_id]);
+
+// Apply action according to bucket filter
+const applyBucketAction = async () => {
+  if (bucketFilter === "all") {
+    toast({ title: "Choose a bucket", description: "Select Auto, Manual, or Reject.", variant: "default", className: "bg-muted text-foreground" });
+    return;
+  }
+  const ids = filteredItems.map((r) => r.claim_id);
+  if (!ids.length) {
+    toast({ title: "No items", description: "No claims in this bucket on this page.", variant: "default", className: "bg-muted text-foreground" });
+    return;
+  }
+  if (bucketFilter === "auto") {
+    await approveIds(ids);
+    return;
+  }
+  if (bucketFilter === "reject") {
+    await rejectIds(ids);
+    return;
+  }
+  // manual bucket: inform only
+  toast({ title: "Manual review", description: `${ids.length} claim(s) flagged for manual review.`, variant: "default", className: "bg-muted text-foreground" });
+};
+
+  // --- Patient name helpers ---
+  const fetchPatientName = async (patientId: number) => {
+    if (patientNames[patientId]) return;
+    try {
+      const res = await fetch(`${api}/patient/${patientId}/basic-info`);
+      if (!res.ok) return;
+      const j = await res.json();
+      const full = `${j.first_name ?? ""} ${j.last_name ?? ""}`.trim() || `Patient #${patientId}`;
+      setPatientNames((m) => ({ ...m, [patientId]: full }));
+    } catch {}
+  };
+
+  const prefetchPatientNames = (rows: ClaimItem[]) => {
+    const unique = Array.from(new Set(rows.map((r) => r.patient_id)));
+    unique.forEach((pid) => { if (!patientNames[pid]) fetchPatientName(pid); });
+  };
 
   return (
     <div className="max-w-full">
@@ -272,18 +390,29 @@ export default function UploadDocuments({ insuranceId }: UploadDocumentsProps) {
                 {!loading && items.length === 0 && (
                   <tr><td colSpan={7} className="p-3 text-muted-foreground">No records</td></tr>
                 )}
-                {!loading && items.map((r, idx) => {
+                {!loading && filteredItems.map((r, idx) => {
                   const score = aiScores[r.claim_id];
                   const b = bucket(score);
+                  const name = patientNames[r.patient_id] ?? `Patient #${r.patient_id}`;
                   return (
                     <tr key={r.claim_id} className={`${idx % 2 ? "bg-foreground/5/20" : ""} hover:bg-foreground/5`}>
                       <td className="p-2 align-top"><Checkbox checked={!!selected[r.claim_id]} onCheckedChange={(c) => handleToggle(r.claim_id, !!c)} /></td>
                       <td className="p-2 align-top">{(page - 1) * pageSize + idx + 1}</td>
-                      <td className="p-2 align-top">Patient #{r.patient_id}</td>
+                      <td className="p-2 align-top">{name}</td>
                       <td className="p-2 align-top"><a href={r.report_url} target="_blank" className="text-primary underline">Open</a></td>
                       <td className="p-2 align-top">{score == null ? "-" : score}</td>
-                      <td className="p-2 align-top capitalize">{b}</td>
-                      <td className="p-2 align-top whitespace-nowrap">{new Date(r.created_at).toLocaleString()}</td>
+                      <td className="p-2 align-top">
+                        {score == null ? (
+                          <Badge variant="secondary">unscored</Badge>
+                        ) : b === "auto" ? (
+                          <Badge className="bg-emerald-600 hover:bg-emerald-600">auto</Badge>
+                        ) : b === "reject" ? (
+                          <Badge variant="destructive">reject</Badge>
+                        ) : (
+                          <Badge className="bg-amber-500 hover:bg-amber-500">manual</Badge>
+                        )}
+                      </td>
+                      <td className="p-2 align-top whitespace-nowrap">{new Date(r.created_at).toLocaleString("en-US")}</td>
                     </tr>
                   );
                 })}
@@ -312,11 +441,18 @@ export default function UploadDocuments({ insuranceId }: UploadDocumentsProps) {
               </PaginationContent>
             </Pagination>
 
-            <div className="ml-auto flex flex-wrap gap-2">
+            <div className="ml-auto flex flex-wrap items-center gap-2">
               <Button variant="secondary" onClick={generateScores}>Generate AI Scores</Button>
-              <Button variant="outline" onClick={saveEvaluations}>Save AI Evaluations</Button>
-              <Button onClick={approveSelected}>Approve (auto ≥ threshold)</Button>
-              <Button variant="destructive" onClick={rejectSelected}>Reject</Button>
+              <Select value={bucketFilter} onValueChange={(v) => setBucketFilter(v as any)}>
+                <SelectTrigger className="w-[160px]"><SelectValue placeholder="Bucket" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="auto">Auto</SelectItem>
+                  <SelectItem value="manual">Manual</SelectItem>
+                  <SelectItem value="reject">Reject</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button onClick={applyBucketAction} disabled={bucketFilter === "all" || bucketFilter === "manual" || loading}>Apply</Button>
             </div>
           </div>
 

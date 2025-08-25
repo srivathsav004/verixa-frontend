@@ -42,6 +42,7 @@ import ActiveClaims from "@/components/insurance/active-claims";
 import ApprovedClaims from "@/components/insurance/approved-claims";
 import FraudAlerts from "@/components/insurance/fraud-alerts";
 import UploadDocuments from "@/components/insurance/upload-documents";
+import ValidateDocuments from "@/components/insurance/validate-documents";
 import { config } from "@/lib/config";
 
 type QueueItem = { id: string; name: string; priority: "Urgent" | "High" | "Normal"; etaMin: number };
@@ -49,7 +50,7 @@ type AlertItem = { id: string; severity: "Critical" | "High" | "Medium"; title: 
 
 export function InsuranceDashboard() {
   const api = useMemo(() => (config.apiBaseUrl || "http://127.0.0.1:8000") + "/api", []);
-  const [selectedView, setSelectedView] = useState<"dashboard" | "upload" | "active" | "approved" | "fraud">("dashboard");
+  const [selectedView, setSelectedView] = useState<"dashboard" | "upload" | "validate" | "active" | "approved" | "fraud">("dashboard");
   const [insuranceId, setInsuranceId] = useState<number | null>(null);
   const [resolving, setResolving] = useState<boolean>(false);
   // Animated counters (mocked)
@@ -179,6 +180,9 @@ export function InsuranceDashboard() {
                       <SidebarMenuButton className="justify-start" isActive={selectedView === "upload"} onClick={() => setSelectedView("upload")}><UploadCloud /> <span>Upload Documents</span></SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
+                      <SidebarMenuButton className="justify-start" isActive={selectedView === "validate"} onClick={() => setSelectedView("validate")}><ShieldCheck /> <span>Validate Documents</span></SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
                       <SidebarMenuButton className="justify-start"><ShieldCheck /> <span>Verification Queue</span></SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
@@ -274,6 +278,8 @@ export function InsuranceDashboard() {
                   {insuranceId ? (
                     selectedView === "upload" ? (
                       <UploadDocuments insuranceId={insuranceId} />
+                    ) : selectedView === "validate" ? (
+                      <ValidateDocuments insuranceId={insuranceId} />
                     ) : selectedView === "active" ? (
                       <ActiveClaims insuranceId={insuranceId} />
                     ) : selectedView === "approved" ? (
@@ -295,7 +301,7 @@ export function InsuranceDashboard() {
                     <CardDescription>Cost per verification</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-semibold">{docsToday.toLocaleString()}</div>
+                    <div className="text-3xl font-semibold">{docsToday.toLocaleString("en-US")}</div>
                     <div className="mt-1 text-xs text-muted-foreground">~ 0.12 POL</div>
                   </CardContent>
                 </Card>
@@ -322,7 +328,7 @@ export function InsuranceDashboard() {
                     <CardDescription>Month-to-date</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-semibold">${costSavings.toLocaleString()}</div>
+                    <div className="text-3xl font-semibold">${costSavings.toLocaleString("en-US")}</div>
                     <div className="mt-1 text-xs text-muted-foreground">+28% vs manual process</div>
                   </CardContent>
                 </Card>
@@ -416,7 +422,7 @@ export function InsuranceDashboard() {
                       <div className="grid gap-3 md:grid-cols-3">
                         <div className="rounded-lg border border-border bg-foreground/5 p-3">
                           <div className="text-xs text-muted-foreground">Monthly Savings</div>
-                          <div className="mt-1 text-2xl font-semibold">${(costSavings * 3).toLocaleString()}</div>
+                          <div className="mt-1 text-2xl font-semibold">${(costSavings * 3).toLocaleString("en-US")}</div>
                         </div>
                         <div className="rounded-lg border border-border bg-foreground/5 p-3">
                           <div className="text-xs text-muted-foreground">ROI vs Manual</div>
