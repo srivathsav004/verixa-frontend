@@ -11,6 +11,15 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { config } from "@/lib/config";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 export type InsuranceClaim = {
   claim_id: number;
@@ -39,6 +48,9 @@ export default function ActiveClaims({ insuranceId }: { insuranceId: number }) {
   const [verifiedFilter, setVerifiedFilter] = useState<"all" | "verified" | "unverified">("all");
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Record<number, boolean>>({});
+  // Pagination
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const fetchClaims = async () => {
     setLoading(true);
@@ -123,8 +135,42 @@ export default function ActiveClaims({ insuranceId }: { insuranceId: number }) {
     return arr;
   }, [data, verifiedFilter, search, nameMap]);
 
+  // Reset page when filters/search change
+  useEffect(() => { setPage(1); }, [verifiedFilter, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paged = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, currentPage, pageSize]);
+
+  const pageNumbers = useMemo(() => {
+    const pages: (number | "ellipsis")[] = [];
+    const add = (p: number) => { if (!pages.includes(p)) pages.push(p); };
+    add(1);
+    for (let p = currentPage - 2; p <= currentPage + 2; p++) {
+      if (p > 1 && p < totalPages) add(p);
+    }
+    if (totalPages > 1) add(totalPages);
+    const normalized: (number | "ellipsis")[] = [];
+    for (let i = 0; i < pages.length; i++) {
+      normalized.push(pages[i]!);
+      if (i < pages.length - 1 && (pages[i + 1] as number) - (pages[i] as number) > 1) {
+        normalized.push("ellipsis");
+      }
+    }
+    return normalized;
+  }, [currentPage, totalPages]);
+
   const allVisibleSelected = filtered.length > 0 && filtered.every((d) => selected[d.claim_id]);
   const someVisibleSelected = filtered.some((d) => selected[d.claim_id]) && !allVisibleSelected;
+
+  // Selection aggregations for enabling/disabling bulk actions
+  const selectedVisible = useMemo(() => filtered.filter((d) => selected[d.claim_id]), [filtered, selected]);
+  const anySelected = selectedVisible.length > 0;
+  const anyVerifiedSelected = selectedVisible.some((d) => d.is_verified);
+  const anyUnverifiedSelected = selectedVisible.some((d) => !d.is_verified);
 
   const toggleSelectAllVisible = () => {
     const next: Record<number, boolean> = { ...selected };
@@ -191,6 +237,14 @@ export default function ActiveClaims({ insuranceId }: { insuranceId: number }) {
               </SelectContent>
             </Select>
             <Input placeholder="Search patient" className="w-[200px]" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}>
+              <SelectTrigger className="w-[120px]"><SelectValue placeholder="Rows/page" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="5">5 / page</SelectItem>
+                <SelectItem value="10">10 / page</SelectItem>
+                <SelectItem value="20">20 / page</SelectItem>
+              </SelectContent>
+            </Select>
             <Button size="sm" variant="outline" onClick={refresh} disabled={refreshing || loading}>
               {refreshing ? "Refreshing..." : "Refresh"}
             </Button>
@@ -198,8 +252,16 @@ export default function ActiveClaims({ insuranceId }: { insuranceId: number }) {
         </div>
 
         <div className="flex flex-wrap gap-2 mb-3">
-          <Button size="sm" variant="secondary" onClick={() => bulkUpdate("approved")} disabled={Object.keys(selected).length === 0}>Approve Selected</Button>
-          <Button size="sm" variant="outline" onClick={() => bulkUpdate("rejected")} disabled={Object.keys(selected).length === 0}>Reject Selected</Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => bulkUpdate("approved")}
+            disabled={!anyVerifiedSelected || anyUnverifiedSelected}
+            title={!anyVerifiedSelected ? "Select at least one verified claim" : anyUnverifiedSelected ? "Unverified claims cannot be approved" : undefined}
+          >
+            Approve Selected
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => bulkUpdate("rejected")} disabled={!anySelected}>Reject Selected</Button>
         </div>
 
         {loading ? (
@@ -232,12 +294,12 @@ export default function ActiveClaims({ insuranceId }: { insuranceId: number }) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((c, idx) => (
+                {paged.map((c, idx) => (
                   <TableRow key={c.claim_id} className="hover:bg-foreground/5">
                     <TableCell>
                       <Checkbox checked={!!selected[c.claim_id]} onCheckedChange={(v) => setSelected((s) => ({ ...s, [c.claim_id]: Boolean(v) }))} />
                     </TableCell>
-                    <TableCell className="font-medium">{idx + 1}</TableCell>
+                    <TableCell className="font-medium">{(currentPage - 1) * pageSize + idx + 1}</TableCell>
                     <TableCell>{nameMap[c.patient_id] || `#${c.patient_id}`}</TableCell>
                     <TableCell>{c.issued_by ? (issuerMap[c.issued_by] || `#${c.issued_by}`) : "N/A"}</TableCell>
                     <TableCell>
@@ -256,7 +318,7 @@ export default function ActiveClaims({ insuranceId }: { insuranceId: number }) {
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
-                        <Button size="sm" variant="secondary" onClick={() => approveSingle(c.claim_id)}>Approve</Button>
+                        <Button size="sm" variant="secondary" onClick={() => approveSingle(c.claim_id)} disabled={!c.is_verified} title={!c.is_verified ? "Only verified claims can be approved" : undefined}>Approve</Button>
                         <Button size="sm" variant="outline" onClick={() => rejectSingle(c.claim_id)}>Reject</Button>
                       </div>
                     </TableCell>
@@ -266,6 +328,34 @@ export default function ActiveClaims({ insuranceId }: { insuranceId: number }) {
             </Table>
           </div>
         )}
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-xs text-muted-foreground">
+            Showing {(filtered.length === 0 ? 0 : (currentPage - 1) * pageSize + 1)}–{Math.min(currentPage * pageSize, filtered.length)} of {filtered.length}
+          </div>
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setPage(Math.max(1, currentPage - 1)); }} />
+              </PaginationItem>
+              {pageNumbers.map((p, i) => (
+                p === "ellipsis" ? (
+                  <PaginationItem key={`e-${i}`}>
+                    <PaginationEllipsis />
+                  </PaginationItem>
+                ) : (
+                  <PaginationItem key={p}>
+                    <PaginationLink href="#" isActive={p === currentPage} onClick={(e) => { e.preventDefault(); setPage(p as number); }}>
+                      {p}
+                    </PaginationLink>
+                  </PaginationItem>
+                )
+              ))}
+              <PaginationItem>
+                <PaginationNext href="#" onClick={(e) => { e.preventDefault(); setPage(Math.min(totalPages, currentPage + 1)); }} />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
       </CardContent>
     </Card>
   );
