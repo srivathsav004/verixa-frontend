@@ -43,6 +43,7 @@ import ApprovedClaims from "@/components/insurance/approved-claims";
 import FraudAlerts from "@/components/insurance/fraud-alerts";
 import UploadDocuments from "@/components/insurance/upload-documents";
 import ValidateDocuments from "@/components/insurance/validate-documents";
+import VerificationQueue from "@/components/insurance/verification-queue";
 import { config } from "@/lib/config";
 
 type QueueItem = { id: string; name: string; priority: "Urgent" | "High" | "Normal"; etaMin: number };
@@ -50,7 +51,7 @@ type AlertItem = { id: string; severity: "Critical" | "High" | "Medium"; title: 
 
 export function InsuranceDashboard() {
   const api = useMemo(() => (config.apiBaseUrl || "http://127.0.0.1:8000") + "/api", []);
-  const [selectedView, setSelectedView] = useState<"dashboard" | "upload" | "validate" | "active" | "approved" | "fraud">("dashboard");
+  const [selectedView, setSelectedView] = useState<"dashboard" | "upload" | "validate" | "vqueue" | "active" | "approved" | "fraud">("dashboard");
   const [insuranceId, setInsuranceId] = useState<number | null>(null);
   const [resolving, setResolving] = useState<boolean>(false);
   // Animated counters (mocked)
@@ -183,7 +184,7 @@ export function InsuranceDashboard() {
                       <SidebarMenuButton className="justify-start" isActive={selectedView === "validate"} onClick={() => setSelectedView("validate")}><ShieldCheck /> <span>Validate Documents</span></SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
-                      <SidebarMenuButton className="justify-start"><ShieldCheck /> <span>Verification Queue</span></SidebarMenuButton>
+                      <SidebarMenuButton className="justify-start" isActive={selectedView === "vqueue"} onClick={() => setSelectedView("vqueue")}><ShieldCheck /> <span>Verification Queue</span></SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
                       <SidebarMenuButton className="justify-start"><FolderUp /> <span>Bulk Upload</span></SidebarMenuButton>
@@ -280,6 +281,8 @@ export function InsuranceDashboard() {
                       <UploadDocuments insuranceId={insuranceId} />
                     ) : selectedView === "validate" ? (
                       <ValidateDocuments insuranceId={insuranceId} />
+                    ) : selectedView === "vqueue" ? (
+                      <VerificationQueue insuranceId={insuranceId} />
                     ) : selectedView === "active" ? (
                       <ActiveClaims insuranceId={insuranceId} />
                     ) : selectedView === "approved" ? (

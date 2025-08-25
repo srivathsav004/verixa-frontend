@@ -58,9 +58,15 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
   const api = useMemo(() => (config.apiBaseUrl || "http://127.0.0.1:8000") + "/api", []);
   const { toast } = useToast();
 
-  const [loading, setLoading] = useState(false);
-  const [items, setItems] = useState<ClaimItem[]>([]);
-  const [total, setTotal] = useState(0);
+  // Unassigned (no task yet) state
+  const [loadingUnassigned, setLoadingUnassigned] = useState(false);
+  const [unassignedItems, setUnassignedItems] = useState<ClaimItem[]>([]);
+  const [unassignedTotal, setUnassignedTotal] = useState(0);
+
+  // Queue (has tasks) state
+  const [loadingQueue, setLoadingQueue] = useState(false);
+  const [queueItems, setQueueItems] = useState<QueueItem[]>([]);
+  const [queueTotal, setQueueTotal] = useState(0);
 
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -91,38 +97,65 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
   // View mode: 'unassigned' (no task yet) or 'queue' (has task)
   const [viewMode, setViewMode] = useState<'unassigned' | 'queue'>('unassigned');
 
-  const pageCount = Math.max(1, Math.ceil(total / pageSize));
-  const start = total === 0 ? 0 : (page - 1) * pageSize + 1;
-  const end = Math.min(total, page * pageSize);
+  const currentTotal = viewMode === 'unassigned' ? unassignedTotal : queueTotal;
+  const pageCount = Math.max(1, Math.ceil(currentTotal / pageSize));
+  const start = currentTotal === 0 ? 0 : (page - 1) * pageSize + 1;
+  const end = Math.min(currentTotal, page * pageSize);
 
-  const fetchClaims = async () => {
-    setLoading(true);
+  const fetchUnassigned = async () => {
+    setLoadingUnassigned(true);
     try {
       const qs = new URLSearchParams({
         page: String(page),
         page_size: String(pageSize),
       });
       if (search.trim()) qs.set("search", search.trim());
-      const resp = await fetch(`${api}/claims/manual-review/by-insurance/${insuranceId}?${qs.toString()}`);
+      // Only manual bucket and WITHOUT tasks
+      const resp = await fetch(`${api}/claims/manual-review-without-task/by-insurance/${insuranceId}?${qs.toString()}`);
       if (!resp.ok) throw new Error(`fetch failed ${resp.status}`);
       const j = await resp.json();
-      setItems(j.items || []);
-      setTotal(j.total || 0);
+      setUnassignedItems(j.items || []);
+      setUnassignedTotal(j.total || 0);
       // preload AI evals and patient names for current page
       loadAIEvals(j.items || []);
       prefetchPatientNames(j.items || []);
     } catch (e) {
       console.error(e);
     } finally {
-      setLoading(false);
+      setLoadingUnassigned(false);
+    }
+  };
+
+  const fetchQueue = async () => {
+    setLoadingQueue(true);
+    try {
+      const qs = new URLSearchParams({
+        insurance_id: String(insuranceId),
+        page: String(page),
+        page_size: String(pageSize),
+      });
+      if (search.trim()) qs.set("search", search.trim());
+      const resp = await fetch(`${api}/verification-queue?${qs.toString()}`);
+      if (!resp.ok) throw new Error(`fetch queue failed ${resp.status}`);
+      const j = await resp.json();
+      setQueueItems(j.items || []);
+      setQueueTotal(j.total || 0);
+      prefetchPatientNames((j.items || []) as ClaimItem[]);
+      // Optionally load AI scores for queue as well (not strictly needed, bucket may vary)
+      loadAIEvals((j.items || []) as ClaimItem[]);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingQueue(false);
     }
   };
 
   useEffect(() => {
     if (!insuranceId) return;
-    fetchClaims();
+    if (viewMode === 'unassigned') fetchUnassigned();
+    else fetchQueue();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [insuranceId, page, pageSize, search]);
+  }, [insuranceId, page, pageSize, search, viewMode]);
 
   const loadAIEvals = async (rows: ClaimItem[]) => {
     const ids = rows.map((r) => r.claim_id);
@@ -154,7 +187,7 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
       });
       if (!res.ok) throw new Error("approve failed");
       toast({ title: "Approved", description: `Approved ${ids.length} claim(s)` });
-      fetchClaims();
+      fetchUnassigned();
     } catch (e) {
       console.error(e);
       toast({ title: "Approve failed", description: "Please try again.", variant: "destructive" });
@@ -172,7 +205,7 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
       });
       if (!res.ok) throw new Error("reject failed");
       toast({ title: "Rejected", description: `Rejected ${ids.length} claim(s)` });
-      fetchClaims();
+      fetchUnassigned();
     } catch (e) {
       console.error(e);
       toast({ title: "Reject failed", description: "Please try again.", variant: "destructive" });
@@ -278,7 +311,7 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
     const ids = Object.keys(selected).filter((k) => selected[Number(k)]).map(Number);
     if (ids.length !== 1) return toast({ title: "Select one document", description: "Select exactly one row to create a task.", variant: "destructive" });
     const id = ids[0];
-    const row = items.find((i) => i.claim_id === id);
+    const row = unassignedItems.find((i) => i.claim_id === id);
     if (!row) return toast({ title: "Invalid selection", description: "Row not found", variant: "destructive" });
     if (!contractAddress) return toast({ title: "No contract", description: "Deploy or set a contract first.", variant: "destructive" });
     // Use report_url as docCid for now (or you can transform to IPFS CID upstream)
@@ -415,10 +448,13 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
     return pages;
   }, [page, pageCount]);
 
-  const allOnPageChecked = items.length > 0 && items.every((i) => selected[i.claim_id]);
+  const displayItems: (ClaimItem | QueueItem)[] = viewMode === 'unassigned' ? unassignedItems : queueItems;
+  const loading = viewMode === 'unassigned' ? loadingUnassigned : loadingQueue;
+  const allOnPageChecked = viewMode === 'unassigned' && unassignedItems.length > 0 && unassignedItems.every((i) => selected[i.claim_id]);
 
   const handleToggleAll = (checked: boolean) => {
-    const pageIds = items.map((i) => i.claim_id);
+    if (viewMode !== 'unassigned') return; // only applicable for selection in unassigned view
+    const pageIds = unassignedItems.map((i) => i.claim_id);
     const next: Record<number, boolean> = { ...selected };
     pageIds.forEach((id) => (next[id] = checked));
     setSelected(next);
@@ -432,15 +468,22 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
         <CardHeader className="pb-3">
           <CardTitle>Validate Documents</CardTitle>
           <CardDescription>
-            Manual review queue. Pending, external claims bucketed as manual.
+            {viewMode === 'unassigned' ? 'Manual review queue: pending, external claims bucketed as manual and without tasks.' : 'Verification queue: pending, unverified claims with tasks.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap items-center gap-3">
             <div className="text-sm text-muted-foreground">
-              Showing {start}-{end} of {total}
+              Showing {start}-{end} of {currentTotal}
             </div>
             <div className="ml-auto flex items-center gap-2">
+              <Select value={viewMode} onValueChange={(v) => { setPage(1); setSelected({}); setViewMode(v as any); }}>
+                <SelectTrigger className="w-[180px]"><SelectValue placeholder="View" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">To Review (no task)</SelectItem>
+                  <SelectItem value="queue">Verification Queue</SelectItem>
+                </SelectContent>
+              </Select>
               <Input placeholder="Search by URL" value={search} onChange={(e) => { setPage(1); setSearch(e.target.value); }} className="w-56" />
               <Select value={String(pageSize)} onValueChange={(v) => { setPage(1); setPageSize(Number(v)); }}>
                 <SelectTrigger className="w-[100px]"><SelectValue placeholder="Page size" /></SelectTrigger>
@@ -477,41 +520,76 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
           </div>
 
           <div className="mt-3 rounded-md border border-border overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-foreground/5 text-xs">
-                <tr>
-                  <th className="p-2 w-10 text-left"><Checkbox checked={allOnPageChecked} onCheckedChange={(c) => handleToggleAll(!!c)} /></th>
-                  <th className="p-2 text-left">S.No.</th>
-                  <th className="p-2 text-left">Patient</th>
-                  <th className="p-2 text-left">Report URL</th>
-                  <th className="p-2 text-left">AI Score</th>
-                  <th className="p-2 text-left">Bucket</th>
-                  <th className="p-2 text-left">Created</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading && (
-                  <tr><td colSpan={7} className="p-3">Loading...</td></tr>
-                )}
-                {!loading && items.length === 0 && (
-                  <tr><td colSpan={7} className="p-3 text-muted-foreground">No records</td></tr>
-                )}
-                {!loading && items.map((r, idx) => {
-                  const score = aiScores[r.claim_id];
-                  return (
+            {viewMode === 'unassigned' ? (
+              <table className="w-full text-sm">
+                <thead className="bg-foreground/5 text-xs">
+                  <tr>
+                    <th className="p-2 w-10 text-left"><Checkbox checked={allOnPageChecked} onCheckedChange={(c) => handleToggleAll(!!c)} /></th>
+                    <th className="p-2 text-left">S.No.</th>
+                    <th className="p-2 text-left">Patient</th>
+                    <th className="p-2 text-left">Report URL</th>
+                    <th className="p-2 text-left">AI Score</th>
+                    <th className="p-2 text-left">Bucket</th>
+                    <th className="p-2 text-left">Created</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading && (
+                    <tr><td colSpan={7} className="p-3">Loading...</td></tr>
+                  )}
+                  {!loading && unassignedItems.length === 0 && (
+                    <tr><td colSpan={7} className="p-3 text-muted-foreground">No records</td></tr>
+                  )}
+                  {!loading && unassignedItems.map((r, idx) => {
+                    const score = aiScores[r.claim_id];
+                    return (
+                      <tr key={r.claim_id} className={`${idx % 2 ? "bg-foreground/5/20" : ""} hover:bg-foreground/5`}>
+                        <td className="p-2 align-top"><Checkbox checked={!!selected[r.claim_id]} onCheckedChange={(c) => handleToggle(r.claim_id, !!c)} /></td>
+                        <td className="p-2 align-top">{(page - 1) * pageSize + idx + 1}</td>
+                        <td className="p-2 align-top">{patientNames[r.patient_id] ?? `Patient #${r.patient_id}`}</td>
+                        <td className="p-2 align-top"><a href={r.report_url} target="_blank" className="text-primary underline">Open</a></td>
+                        <td className="p-2 align-top">{score == null ? "-" : score}</td>
+                        <td className="p-2 align-top"><Badge className="bg-amber-500 hover:bg-amber-500">manual</Badge></td>
+                        <td className="p-2 align-top whitespace-nowrap">{new Date(r.created_at).toLocaleString("en-US")}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-foreground/5 text-xs">
+                  <tr>
+                    <th className="p-2 text-left">S.No.</th>
+                    <th className="p-2 text-left">Patient</th>
+                    <th className="p-2 text-left">Report URL</th>
+                    <th className="p-2 text-left">Task ID</th>
+                    <th className="p-2 text-left">Task Status</th>
+                    <th className="p-2 text-left">Contract</th>
+                    <th className="p-2 text-left">Created</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading && (
+                    <tr><td colSpan={7} className="p-3">Loading...</td></tr>
+                  )}
+                  {!loading && queueItems.length === 0 && (
+                    <tr><td colSpan={7} className="p-3 text-muted-foreground">No records</td></tr>
+                  )}
+                  {!loading && queueItems.map((r, idx) => (
                     <tr key={r.claim_id} className={`${idx % 2 ? "bg-foreground/5/20" : ""} hover:bg-foreground/5`}>
-                      <td className="p-2 align-top"><Checkbox checked={!!selected[r.claim_id]} onCheckedChange={(c) => handleToggle(r.claim_id, !!c)} /></td>
                       <td className="p-2 align-top">{(page - 1) * pageSize + idx + 1}</td>
                       <td className="p-2 align-top">{patientNames[r.patient_id] ?? `Patient #${r.patient_id}`}</td>
                       <td className="p-2 align-top"><a href={r.report_url} target="_blank" className="text-primary underline">Open</a></td>
-                      <td className="p-2 align-top">{score == null ? "-" : score}</td>
-                      <td className="p-2 align-top"><Badge className="bg-amber-500 hover:bg-amber-500">manual</Badge></td>
+                      <td className="p-2 align-top">{r.task_id}</td>
+                      <td className="p-2 align-top"><Badge variant="outline">{r.task_status ?? '-'}</Badge></td>
+                      <td className="p-2 align-top"><span className="font-mono text-xs break-all">{r.contract_address}</span></td>
                       <td className="p-2 align-top whitespace-nowrap">{new Date(r.created_at).toLocaleString("en-US")}</td>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -535,11 +613,13 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
               </PaginationContent>
             </Pagination>
 
-            <div className="ml-auto flex flex-wrap items-center gap-2">
-              <Button variant="secondary" onClick={approveSelected} disabled={loading}>Approve Selected</Button>
-              <Button variant="destructive" onClick={rejectSelected} disabled={loading}>Reject Selected</Button>
-              <Button onClick={handleOpenCreateTask} disabled={loading || !contractAddress}>Create Task</Button>
-            </div>
+            {viewMode === 'unassigned' ? (
+              <div className="ml-auto flex flex-wrap items-center gap-2">
+                <Button variant="secondary" onClick={approveSelected} disabled={loading}>Approve Selected</Button>
+                <Button variant="destructive" onClick={rejectSelected} disabled={loading}>Reject Selected</Button>
+                <Button onClick={handleOpenCreateTask} disabled={loading || !contractAddress}>Create Task</Button>
+              </div>
+            ) : null}
           </div>
         </CardContent>
       </Card>
