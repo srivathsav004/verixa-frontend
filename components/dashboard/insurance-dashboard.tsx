@@ -41,6 +41,7 @@ import {
 import ActiveClaims from "@/components/insurance/active-claims";
 import ApprovedClaims from "@/components/insurance/approved-claims";
 import FraudAlerts from "@/components/insurance/fraud-alerts";
+import UploadDocuments from "@/components/insurance/upload-documents";
 import { config } from "@/lib/config";
 
 type QueueItem = { id: string; name: string; priority: "Urgent" | "High" | "Normal"; etaMin: number };
@@ -48,7 +49,7 @@ type AlertItem = { id: string; severity: "Critical" | "High" | "Medium"; title: 
 
 export function InsuranceDashboard() {
   const api = useMemo(() => (config.apiBaseUrl || "http://127.0.0.1:8000") + "/api", []);
-  const [selectedView, setSelectedView] = useState<"dashboard" | "active" | "approved" | "fraud">("dashboard");
+  const [selectedView, setSelectedView] = useState<"dashboard" | "upload" | "active" | "approved" | "fraud">("dashboard");
   const [insuranceId, setInsuranceId] = useState<number | null>(null);
   const [resolving, setResolving] = useState<boolean>(false);
   // Animated counters (mocked)
@@ -175,7 +176,7 @@ export function InsuranceDashboard() {
                 <SidebarGroupContent>
                   <SidebarMenu>
                     <SidebarMenuItem>
-                      <SidebarMenuButton className="justify-start"><UploadCloud /> <span>Upload Documents</span></SidebarMenuButton>
+                      <SidebarMenuButton className="justify-start" isActive={selectedView === "upload"} onClick={() => setSelectedView("upload")}><UploadCloud /> <span>Upload Documents</span></SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
                       <SidebarMenuButton className="justify-start"><ShieldCheck /> <span>Verification Queue</span></SidebarMenuButton>
@@ -271,7 +272,9 @@ export function InsuranceDashboard() {
               {selectedView !== "dashboard" ? (
                 <div className="max-w-full">
                   {insuranceId ? (
-                    selectedView === "active" ? (
+                    selectedView === "upload" ? (
+                      <UploadDocuments insuranceId={insuranceId} />
+                    ) : selectedView === "active" ? (
                       <ActiveClaims insuranceId={insuranceId} />
                     ) : selectedView === "approved" ? (
                       <ApprovedClaims insuranceId={insuranceId} />
