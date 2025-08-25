@@ -32,6 +32,8 @@ export default function ActiveClaims({ insuranceId }: { insuranceId: number }) {
 
   // Patient name cache
   const [nameMap, setNameMap] = useState<Record<number, string>>({});
+  // Issuer name cache
+  const [issuerMap, setIssuerMap] = useState<Record<number, string>>({});
 
   // Filters and selection
   const [verifiedFilter, setVerifiedFilter] = useState<"all" | "verified" | "unverified">("all");
@@ -58,6 +60,23 @@ export default function ActiveClaims({ insuranceId }: { insuranceId: number }) {
                 const pj = await r.json();
                 const full = `${pj.first_name || ""} ${pj.last_name || ""}`.trim() || `#${pid}`;
                 setNameMap((m) => ({ ...m, [pid]: full }));
+              }
+            } catch {}
+          })
+        );
+      }
+      // fetch missing issuers
+      const uniqIssuerIds = Array.from(new Set(items.map((i) => i.issued_by).filter((v) => v != null))) as number[];
+      const toFetchIss = uniqIssuerIds.filter((iid) => !(iid in issuerMap));
+      if (toFetchIss.length) {
+        await Promise.all(
+          toFetchIss.map(async (iid) => {
+            try {
+              const r = await fetch(`${api}/issuer/${iid}/basic-info`);
+              if (r.ok) {
+                const ij = await r.json();
+                const nm = ij.organization_name || `Issuer #${iid}`;
+                setIssuerMap((m) => ({ ...m, [iid]: nm }));
               }
             } catch {}
           })
@@ -204,6 +223,7 @@ export default function ActiveClaims({ insuranceId }: { insuranceId: number }) {
                   </TableHead>
                   <TableHead className="w-[70px]">S.No.</TableHead>
                   <TableHead>Patient</TableHead>
+                  <TableHead>Issuer</TableHead>
                   <TableHead>Verified</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Created</TableHead>
@@ -219,6 +239,7 @@ export default function ActiveClaims({ insuranceId }: { insuranceId: number }) {
                     </TableCell>
                     <TableCell className="font-medium">{idx + 1}</TableCell>
                     <TableCell>{nameMap[c.patient_id] || `#${c.patient_id}`}</TableCell>
+                    <TableCell>{c.issued_by ? (issuerMap[c.issued_by] || `#${c.issued_by}`) : "N/A"}</TableCell>
                     <TableCell>
                       <Badge variant={c.is_verified ? "secondary" : "outline"}>{c.is_verified ? "Verified" : "Unverified"}</Badge>
                     </TableCell>
@@ -235,7 +256,7 @@ export default function ActiveClaims({ insuranceId }: { insuranceId: number }) {
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
-                        <Button size="sm" variant="secondary" onClick={() => approveSingle(c.claim_id)} disabled={!c.is_verified}>Approve</Button>
+                        <Button size="sm" variant="secondary" onClick={() => approveSingle(c.claim_id)}>Approve</Button>
                         <Button size="sm" variant="outline" onClick={() => rejectSingle(c.claim_id)}>Reject</Button>
                       </div>
                     </TableCell>
