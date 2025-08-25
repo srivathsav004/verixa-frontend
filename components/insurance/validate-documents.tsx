@@ -34,8 +34,21 @@ type ClaimItem = {
   created_at: string;
 };
 
+type QueueItem = {
+  claim_id: number;
+  patient_id: number;
+  insurance_id: number;
+  report_url: string;
+  is_verified: boolean;
+  task_row_id: number;
+  task_id: number;
+  contract_address: string;
+  task_status: string | null;
+  created_at: string;
+};
+
 type PaginatedClaimsResponse = {
-  items: ClaimItem[];
+  items: (ClaimItem | QueueItem)[];
   total: number;
   page: number;
   page_size: number;
@@ -70,9 +83,13 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
   // Create task modal state
   const [openTask, setOpenTask] = useState(false);
   const [selectedDocCid, setSelectedDocCid] = useState<string>("");
+  const [selectedClaimId, setSelectedClaimId] = useState<number | null>(null);
   const [requiredValidators, setRequiredValidators] = useState<number>(1);
   const [rewardPol, setRewardPol] = useState<string>("0");
   const [issuerWallet, setIssuerWallet] = useState<string>("");
+
+  // View mode: 'unassigned' (no task yet) or 'queue' (has task)
+  const [viewMode, setViewMode] = useState<'unassigned' | 'queue'>('unassigned');
 
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const start = total === 0 ? 0 : (page - 1) * pageSize + 1;
@@ -81,19 +98,21 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
   const fetchClaims = async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
-      if (search.trim()) params.set("search", search.trim());
-      const res = await fetch(`${api}/claims/manual-review/by-insurance/${insuranceId}?${params.toString()}`);
-      if (!res.ok) throw new Error(`fetch failed ${res.status}`);
-      const j: PaginatedClaimsResponse = await res.json();
+      const qs = new URLSearchParams({
+        page: String(page),
+        page_size: String(pageSize),
+      });
+      if (search.trim()) qs.set("search", search.trim());
+      const resp = await fetch(`${api}/claims/manual-review/by-insurance/${insuranceId}?${qs.toString()}`);
+      if (!resp.ok) throw new Error(`fetch failed ${resp.status}`);
+      const j = await resp.json();
       setItems(j.items || []);
       setTotal(j.total || 0);
-      setSelected({});
+      // preload AI evals and patient names for current page
+      loadAIEvals(j.items || []);
       prefetchPatientNames(j.items || []);
-      await loadAIEvals(j.items || []);
     } catch (e) {
       console.error(e);
-      toast({ title: "Could not load manual-review claims", description: "Please retry in a moment.", variant: "default", className: "bg-muted text-foreground" });
     } finally {
       setLoading(false);
     }
@@ -104,40 +123,6 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
     fetchClaims();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [insuranceId, page, pageSize, search]);
-
-  // Load current user and wallet + any saved contract
-  useEffect(() => {
-    try {
-      const uid = Number(globalThis?.localStorage?.getItem("user_id") || "");
-      if (uid && !Number.isNaN(uid)) {
-        setUserId(uid);
-        (async () => {
-          let walletAddr: string = "";
-          try {
-            const w = await fetch(`${api}/users/${uid}/wallet`);
-            const jw = await w.json();
-            walletAddr = (jw.wallet_address || "").toString();
-            setUserWallet(walletAddr || null);
-          } catch {}
-          // Prefer wallet-bound lookup to enforce single contract per wallet
-          try {
-            if (walletAddr) {
-              const c2 = await fetch(`${api}/web3/contracts/by-wallet/${encodeURIComponent(walletAddr)}`);
-              const j2 = await c2.json();
-              const addr2 = j2?.contract?.contract_address;
-              if (addr2) setContractAddress(addr2);
-            } else {
-              // Fallback by user
-              const c = await fetch(`${api}/web3/contracts/by-user/${uid}`);
-              const jc = await c.json();
-              const addr = jc?.contract?.contract_address;
-              if (addr) setContractAddress(addr);
-            }
-          } catch {}
-        })();
-      }
-    } catch {}
-  }, [api]);
 
   const loadAIEvals = async (rows: ClaimItem[]) => {
     const ids = rows.map((r) => r.claim_id);
@@ -289,15 +274,16 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
     }
   };
 
-  const openCreateTask = () => {
-    const ids = Object.keys(selected).filter((k) => selected[Number(k)]).map((k) => Number(k));
-    if (ids.length !== 1) {
-      toast({ title: "Select one document", description: "Pick exactly one to create a task.", variant: "destructive" });
-      return;
-    }
-    const row = items.find((r) => r.claim_id === ids[0]);
+  const handleOpenCreateTask = () => {
+    const ids = Object.keys(selected).filter((k) => selected[Number(k)]).map(Number);
+    if (ids.length !== 1) return toast({ title: "Select one document", description: "Select exactly one row to create a task.", variant: "destructive" });
+    const id = ids[0];
+    const row = items.find((i) => i.claim_id === id);
+    if (!row) return toast({ title: "Invalid selection", description: "Row not found", variant: "destructive" });
+    if (!contractAddress) return toast({ title: "No contract", description: "Deploy or set a contract first.", variant: "destructive" });
     // Use report_url as docCid for now (or you can transform to IPFS CID upstream)
     setSelectedDocCid(row?.report_url || "");
+    setSelectedClaimId(row?.claim_id || null);
     setOpenTask(true);
   };
 
@@ -385,12 +371,14 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
         body: JSON.stringify({
           user_id: userId,
           contract_address: contractAddress,
-          task_id: onchainTaskId ?? 0,
+          task_id: onchainTaskId ?? -1,
           doc_cid: selectedDocCid,
           required_validators: requiredValidators,
-          reward_wei: rewardWeiNum ?? 0,
+          reward_wei: Number(rewardWeiNum?.toString?.() || 0),
           issuer_wallet: issuerWallet,
           tx_hash: tx.hash,
+          claim_id: selectedClaimId,
+          task_status: "pending",
         })
       });
       if (!persist.ok) throw new Error("save_task failed");
@@ -550,7 +538,7 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
             <div className="ml-auto flex flex-wrap items-center gap-2">
               <Button variant="secondary" onClick={approveSelected} disabled={loading}>Approve Selected</Button>
               <Button variant="destructive" onClick={rejectSelected} disabled={loading}>Reject Selected</Button>
-              <Button onClick={openCreateTask} disabled={loading || !contractAddress}>Create Task</Button>
+              <Button onClick={handleOpenCreateTask} disabled={loading || !contractAddress}>Create Task</Button>
             </div>
           </div>
         </CardContent>
