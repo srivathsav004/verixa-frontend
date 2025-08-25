@@ -8,6 +8,16 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { config } from "@/lib/config";
 import { toast } from "@/hooks/use-toast";
 import { FileUpload } from "@/components/ui/file-upload";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 export type IssuedDoc = {
   id: number;
@@ -42,6 +52,12 @@ export default function ClaimSubmit({ patientId }: { patientId: number }) {
   const [submitting, setSubmitting] = useState(false);
   const [insurerQuery, setInsurerQuery] = useState("");
   const [sortByCsrDesc, setSortByCsrDesc] = useState(true);
+  // Insurer pagination
+  const [insPage, setInsPage] = useState(1);
+  const [insPageSize, setInsPageSize] = useState(6);
+  // Docs pagination
+  const [docPage, setDocPage] = useState(1);
+  const [docPageSize, setDocPageSize] = useState(6);
 
   const hasActiveDocs = useMemo(() => docs.some(d => d.is_active), [docs]);
 
@@ -156,6 +172,55 @@ export default function ClaimSubmit({ patientId }: { patientId: number }) {
     return list;
   }, [insurers, insurerQuery, sortByCsrDesc]);
 
+  // Reset insurer page when filters change
+  useEffect(() => { setInsPage(1); }, [insurerQuery, sortByCsrDesc]);
+
+  const insTotalPages = Math.max(1, Math.ceil(filteredInsurers.length / insPageSize));
+  const insCurrentPage = Math.min(insPage, insTotalPages);
+  const pagedInsurers = useMemo(() => {
+    const start = (insCurrentPage - 1) * insPageSize;
+    return filteredInsurers.slice(start, start + insPageSize);
+  }, [filteredInsurers, insCurrentPage, insPageSize]);
+  const insPageNumbers = useMemo(() => {
+    const pages: (number | "ellipsis")[] = [];
+    const add = (p: number) => { if (!pages.includes(p)) pages.push(p); };
+    add(1);
+    for (let p = insCurrentPage - 2; p <= insCurrentPage + 2; p++) {
+      if (p > 1 && p < insTotalPages) add(p);
+    }
+    if (insTotalPages > 1) add(insTotalPages);
+    const normalized: (number | "ellipsis")[] = [];
+    for (let i = 0; i < pages.length; i++) {
+      normalized.push(pages[i]!);
+      if (i < pages.length - 1 && (pages[i + 1] as number) - (pages[i] as number) > 1) normalized.push("ellipsis");
+    }
+    return normalized;
+  }, [insCurrentPage, insTotalPages]);
+
+  // Docs pagination derived
+  useEffect(() => { setDocPage(1); }, [docs]);
+  const docTotalPages = Math.max(1, Math.ceil(docs.length / docPageSize));
+  const docCurrentPage = Math.min(docPage, docTotalPages);
+  const pagedDocs = useMemo(() => {
+    const start = (docCurrentPage - 1) * docPageSize;
+    return docs.slice(start, start + docPageSize);
+  }, [docs, docCurrentPage, docPageSize]);
+  const docPageNumbers = useMemo(() => {
+    const pages: (number | "ellipsis")[] = [];
+    const add = (p: number) => { if (!pages.includes(p)) pages.push(p); };
+    add(1);
+    for (let p = docCurrentPage - 2; p <= docCurrentPage + 2; p++) {
+      if (p > 1 && p < docTotalPages) add(p);
+    }
+    if (docTotalPages > 1) add(docTotalPages);
+    const normalized: (number | "ellipsis")[] = [];
+    for (let i = 0; i < pages.length; i++) {
+      normalized.push(pages[i]!);
+      if (i < pages.length - 1 && (pages[i + 1] as number) - (pages[i] as number) > 1) normalized.push("ellipsis");
+    }
+    return normalized;
+  }, [docCurrentPage, docTotalPages]);
+
   const selectedInsurer = useMemo(() => (
     filteredInsurers.find(i => i.insurance_id === Number(selectedInsuranceId))
   ), [filteredInsurers, selectedInsuranceId]);
@@ -191,8 +256,42 @@ export default function ClaimSubmit({ patientId }: { patientId: number }) {
                     Sort CSR {sortByCsrDesc ? "↓" : "↑"}
                   </button>
                 </div>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-1">
+                  <div className="text-xs text-muted-foreground">
+                    Showing {(filteredInsurers.length === 0 ? 0 : (insCurrentPage - 1) * insPageSize + 1)}–{Math.min(insCurrentPage * insPageSize, filteredInsurers.length)} of {filteredInsurers.length} insurers
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Select value={String(insPageSize)} onValueChange={(v) => { setInsPageSize(Number(v)); setInsPage(1); }}>
+                      <SelectTrigger className="h-8 w-[120px]"><SelectValue placeholder="Rows/page" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="6">6 / page</SelectItem>
+                        <SelectItem value="9">9 / page</SelectItem>
+                        <SelectItem value="12">12 / page</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Pagination>
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setInsPage(Math.max(1, insCurrentPage - 1)); }} />
+                        </PaginationItem>
+                        {insPageNumbers.map((p, i) => (
+                          p === "ellipsis" ? (
+                            <PaginationItem key={`ie-${i}`}><PaginationEllipsis /></PaginationItem>
+                          ) : (
+                            <PaginationItem key={p}>
+                              <PaginationLink href="#" isActive={p === insCurrentPage} onClick={(e) => { e.preventDefault(); setInsPage(p as number); }}>{p}</PaginationLink>
+                            </PaginationItem>
+                          )
+                        ))}
+                        <PaginationItem>
+                          <PaginationNext href="#" onClick={(e) => { e.preventDefault(); setInsPage(Math.min(insTotalPages, insCurrentPage + 1)); }} />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  </div>
+                </div>
                 <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {filteredInsurers.map((ins) => {
+                {pagedInsurers.map((ins) => {
                   const selected = Number(selectedInsuranceId) === ins.insurance_id;
                   const initials = ins.company_name
                     .split(" ")
@@ -297,8 +396,42 @@ export default function ClaimSubmit({ patientId }: { patientId: number }) {
           ) : docs.length > 0 ? (
             <div>
               <div className="text-sm mb-1">Select an issued document</div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-1">
+                <div className="text-xs text-muted-foreground">
+                  Showing {(docs.length === 0 ? 0 : (docCurrentPage - 1) * docPageSize + 1)}–{Math.min(docCurrentPage * docPageSize, docs.length)} of {docs.length} documents
+                </div>
+                <div className="flex items-center gap-2">
+                  <Select value={String(docPageSize)} onValueChange={(v) => { setDocPageSize(Number(v)); setDocPage(1); }}>
+                    <SelectTrigger className="h-8 w-[120px]"><SelectValue placeholder="Rows/page" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="6">6 / page</SelectItem>
+                      <SelectItem value="9">9 / page</SelectItem>
+                      <SelectItem value="12">12 / page</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setDocPage(Math.max(1, docCurrentPage - 1)); }} />
+                      </PaginationItem>
+                      {docPageNumbers.map((p, i) => (
+                        p === "ellipsis" ? (
+                          <PaginationItem key={`de-${i}`}><PaginationEllipsis /></PaginationItem>
+                        ) : (
+                          <PaginationItem key={p}>
+                            <PaginationLink href="#" isActive={p === docCurrentPage} onClick={(e) => { e.preventDefault(); setDocPage(p as number); }}>{p}</PaginationLink>
+                          </PaginationItem>
+                        )
+                      ))}
+                      <PaginationItem>
+                        <PaginationNext href="#" onClick={(e) => { e.preventDefault(); setDocPage(Math.min(docTotalPages, docCurrentPage + 1)); }} />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              </div>
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {docs.map((d) => {
+                {pagedDocs.map((d) => {
                   const selected = Number(selectedIssuedDocId) === d.id;
                   const disabled = !d.is_active;
                   return (

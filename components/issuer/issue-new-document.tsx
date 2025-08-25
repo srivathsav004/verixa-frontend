@@ -9,6 +9,16 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { FileUpload } from "@/components/ui/file-upload";
 import { config } from "@/lib/config";
 import { toast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 // Types aligned with backend /patients response
 type Patient = {
@@ -27,7 +37,7 @@ export default function IssueNewDocument() {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
   const [allPatients, setAllPatients] = useState<Patient[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -101,6 +111,22 @@ export default function IssueNewDocument() {
   }, [allPatients, search, page, pageSize]);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const pageNumbers = (() => {
+    const current = Math.min(page, totalPages);
+    const pages: (number | "ellipsis")[] = [];
+    const add = (p: number) => { if (!pages.includes(p)) pages.push(p); };
+    add(1);
+    for (let p = current - 2; p <= current + 2; p++) {
+      if (p > 1 && p < totalPages) add(p);
+    }
+    if (totalPages > 1) add(totalPages);
+    const normalized: (number | "ellipsis")[] = [];
+    for (let i = 0; i < pages.length; i++) {
+      normalized.push(pages[i]!);
+      if (i < pages.length - 1 && (pages[i + 1] as number) - (pages[i] as number) > 1) normalized.push("ellipsis");
+    }
+    return normalized;
+  })();
 
   // Smooth scroll to the issue form after selecting a patient
   useEffect(() => {
@@ -178,7 +204,7 @@ export default function IssueNewDocument() {
               className="w-full sm:w-80"
             />
             <div className="ml-auto text-xs sm:text-sm text-muted-foreground">
-              Page {page} of {totalPages} • {total} patients
+              Showing {(total === 0 ? 0 : (page - 1) * pageSize + 1)}–{Math.min(page * pageSize, total)} of {total} patients
             </div>
           </div>
 
@@ -186,6 +212,7 @@ export default function IssueNewDocument() {
             <table className="w-full text-sm">
               <thead className="bg-foreground/5 sticky top-0 z-10">
                 <tr>
+                  <th className="text-left p-2 w-[80px]">S.No.</th>
                   <th className="text-left p-2">Name</th>
                   <th className="text-left p-2">Email</th>
                   <th className="text-left p-2">Phone</th>
@@ -206,6 +233,7 @@ export default function IssueNewDocument() {
                 )}
                 {!loading && patients.map((p, idx) => (
                   <tr key={p.patient_id} className={`${idx % 2 ? "bg-foreground/5/20" : ""} ${selected?.patient_id === p.patient_id ? "bg-foreground/10" : ""}`}>
+                    <td className="p-2">{(page - 1) * pageSize + idx + 1}</td>
                     <td className="p-2 font-medium">{p.first_name} {p.last_name}</td>
                     <td className="p-2">{p.email}</td>
                     <td className="p-2">{p.phone_number}</td>
@@ -223,9 +251,34 @@ export default function IssueNewDocument() {
             </table>
           </div>
 
-          <div className="mt-3 flex items-center gap-2">
-            <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>Prev</Button>
-            <Button size="sm" variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>Next</Button>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}>
+              <SelectTrigger className="h-8 w-[120px]"><SelectValue placeholder="Rows/page" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="5">5 / page</SelectItem>
+                <SelectItem value="10">10 / page</SelectItem>
+                <SelectItem value="20">20 / page</SelectItem>
+              </SelectContent>
+            </Select>
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.max(1, p - 1)); }} />
+                </PaginationItem>
+                {pageNumbers.map((p, i) => (
+                  p === "ellipsis" ? (
+                    <PaginationItem key={`e-${i}`}><PaginationEllipsis /></PaginationItem>
+                  ) : (
+                    <PaginationItem key={p}>
+                      <PaginationLink href="#" isActive={p === page} onClick={(e) => { e.preventDefault(); setPage(p as number); }}>{p}</PaginationLink>
+                    </PaginationItem>
+                  )
+                ))}
+                <PaginationItem>
+                  <PaginationNext href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.min(totalPages, p + 1)); }} />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
           </div>
 
           {/* Issue form */}

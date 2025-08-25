@@ -2,8 +2,17 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { config } from "@/lib/config";
 
 type IssuedDoc = {
@@ -21,11 +30,30 @@ export default function ReportsHistory() {
   const [items, setItems] = useState<IssuedDoc[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [patientId, setPatientId] = useState<string>("");
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const pageNumbers = useMemo(() => {
+    const current = Math.min(page, totalPages);
+    const pages: (number | "ellipsis")[] = [];
+    const add = (p: number) => { if (!pages.includes(p)) pages.push(p); };
+    add(1);
+    for (let p = current - 2; p <= current + 2; p++) {
+      if (p > 1 && p < totalPages) add(p);
+    }
+    if (totalPages > 1) add(totalPages);
+    const normalized: (number | "ellipsis")[] = [];
+    for (let i = 0; i < pages.length; i++) {
+      normalized.push(pages[i]!);
+      if (i < pages.length - 1 && (pages[i + 1] as number) - (pages[i] as number) > 1) normalized.push("ellipsis");
+    }
+    return normalized;
+  }, [page, totalPages]);
+
+  // Map patient_id -> full name
+  const [patientMap, setPatientMap] = useState<Record<number, string>>({});
   // Single fetch of all issued docs
   useEffect(() => {
     let ignore = false;
@@ -45,6 +73,35 @@ export default function ReportsHistory() {
     run();
     return () => { ignore = true; };
   }, [api]);
+
+  // Resolve patient names when IDs are present and unknown
+  useEffect(() => {
+    const missing = Array.from(new Set(allItems.map(r => r.patient_id).filter(id => !(id in patientMap))));
+    if (missing.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const entries = await Promise.all(missing.map(async (id) => {
+          try {
+            const r = await fetch(`${api}/patient/${id}/basic-info`);
+            if (!r.ok) throw new Error(String(r.status));
+            const j = await r.json();
+            return [id, `${j.first_name} ${j.last_name}`.trim()] as const;
+          } catch {
+            return [id, `Patient #${id}`] as const;
+          }
+        }));
+        if (!cancelled) {
+          setPatientMap(prev => {
+            const next = { ...prev } as Record<number, string>;
+            for (const [id, name] of entries) next[id] = name;
+            return next;
+          });
+        }
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [allItems, api, patientMap]);
 
   // Client-side filter + paginate
   useEffect(() => {
@@ -72,14 +129,14 @@ export default function ReportsHistory() {
           <div className="flex flex-wrap gap-3 items-center">
             <Input value={search} onChange={(e)=>{ setPage(1); setSearch(e.target.value); }} placeholder="Search by report type" className="w-full sm:w-72" />
             <Input value={patientId} onChange={(e)=>{ setPage(1); setPatientId(e.target.value); }} placeholder="Filter by patient ID" className="w-full sm:w-56" />
-            <div className="ml-auto text-xs sm:text-sm text-muted-foreground">Page {page} of {totalPages} • {total} records</div>
+            <div className="ml-auto text-xs sm:text-sm text-muted-foreground">Showing {(total === 0 ? 0 : (page - 1) * pageSize + 1)}–{Math.min(page * pageSize, total)} of {total}</div>
           </div>
 
           <div className="mt-3 overflow-x-auto rounded-md border border-border">
             <table className="w-full text-sm">
               <thead className="bg-foreground/5 sticky top-0 z-10">
                 <tr>
-                  <th className="text-left p-2">ID</th>
+                  <th className="text-left p-2 w-[80px]">S.No.</th>
                   <th className="text-left p-2">Patient</th>
                   <th className="text-left p-2">Report Type</th>
                   <th className="text-left p-2">Document</th>
@@ -95,8 +152,12 @@ export default function ReportsHistory() {
                 )}
                 {!loading && items.map((r, idx) => (
                   <tr key={r.id} className={`${idx % 2 ? "bg-foreground/5/20" : ""} hover:bg-foreground/5`}>
-                    <td className="p-2 align-top">{r.id}</td>
-                    <td className="p-2 align-top">{r.patient_id}</td>
+                    <td className="p-2 align-top">{(page - 1) * pageSize + idx + 1}</td>
+                    <td className="p-2 align-top">
+                      <div className="leading-tight">
+                        <div className="font-medium">{patientMap[r.patient_id] || `Patient #${r.patient_id}`}</div>
+                      </div>
+                    </td>
                     <td className="p-2 align-top">{r.report_type}</td>
                     <td className="p-2 align-top">
                       <a href={r.document_url} target="_blank" className="text-primary underline">Open</a>
@@ -108,9 +169,34 @@ export default function ReportsHistory() {
             </table>
           </div>
 
-          <div className="mt-3 flex items-center gap-2">
-            <Button size="sm" variant="outline" disabled={page<=1} onClick={()=>setPage(p=>Math.max(1,p-1))}>Prev</Button>
-            <Button size="sm" variant="outline" disabled={page>=totalPages} onClick={()=>setPage(p=>Math.min(totalPages,p+1))}>Next</Button>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}>
+              <SelectTrigger className="h-8 w-[120px]"><SelectValue placeholder="Rows/page" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="5">5 / page</SelectItem>
+                <SelectItem value="10">10 / page</SelectItem>
+                <SelectItem value="20">20 / page</SelectItem>
+              </SelectContent>
+            </Select>
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setPage(p=>Math.max(1,p-1)); }} />
+                </PaginationItem>
+                {pageNumbers.map((p, i) => (
+                  p === "ellipsis" ? (
+                    <PaginationItem key={`e-${i}`}><PaginationEllipsis /></PaginationItem>
+                  ) : (
+                    <PaginationItem key={p}>
+                      <PaginationLink href="#" isActive={p === page} onClick={(e) => { e.preventDefault(); setPage(p as number); }}>{p}</PaginationLink>
+                    </PaginationItem>
+                  )
+                ))}
+                <PaginationItem>
+                  <PaginationNext href="#" onClick={(e) => { e.preventDefault(); setPage(p=>Math.min(totalPages,p+1)); }} />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
           </div>
         </CardContent>
       </Card>
