@@ -17,6 +17,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { config } from "@/lib/config";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { CONTRACT_ABI, CONTRACT_BYTECODE, hasContractArtifacts } from "@/lib/contracts/documentValidationBounty";
 
 export type ValidateDocumentsProps = { insuranceId: number };
 
@@ -54,6 +57,23 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
   const [aiScores, setAiScores] = useState<Record<number, number>>({});
   const [patientNames, setPatientNames] = useState<Record<number, string>>({});
 
+  // Web3 state
+  const [userId, setUserId] = useState<number | null>(null);
+  const [userWallet, setUserWallet] = useState<string | null>(null);
+  const [contractAddress, setContractAddress] = useState<string | null>(null);
+  const [loadingWeb3, setLoadingWeb3] = useState(false);
+
+  // Deploy modal state
+  const [openDeploy, setOpenDeploy] = useState(false);
+  const [existingAddress, setExistingAddress] = useState<string>("");
+
+  // Create task modal state
+  const [openTask, setOpenTask] = useState(false);
+  const [selectedDocCid, setSelectedDocCid] = useState<string>("");
+  const [requiredValidators, setRequiredValidators] = useState<number>(1);
+  const [rewardPol, setRewardPol] = useState<string>("0");
+  const [issuerWallet, setIssuerWallet] = useState<string>("");
+
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const start = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const end = Math.min(total, page * pageSize);
@@ -84,6 +104,40 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
     fetchClaims();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [insuranceId, page, pageSize, search]);
+
+  // Load current user and wallet + any saved contract
+  useEffect(() => {
+    try {
+      const uid = Number(globalThis?.localStorage?.getItem("user_id") || "");
+      if (uid && !Number.isNaN(uid)) {
+        setUserId(uid);
+        (async () => {
+          let walletAddr: string = "";
+          try {
+            const w = await fetch(`${api}/users/${uid}/wallet`);
+            const jw = await w.json();
+            walletAddr = (jw.wallet_address || "").toString();
+            setUserWallet(walletAddr || null);
+          } catch {}
+          // Prefer wallet-bound lookup to enforce single contract per wallet
+          try {
+            if (walletAddr) {
+              const c2 = await fetch(`${api}/web3/contracts/by-wallet/${encodeURIComponent(walletAddr)}`);
+              const j2 = await c2.json();
+              const addr2 = j2?.contract?.contract_address;
+              if (addr2) setContractAddress(addr2);
+            } else {
+              // Fallback by user
+              const c = await fetch(`${api}/web3/contracts/by-user/${uid}`);
+              const jc = await c.json();
+              const addr = jc?.contract?.contract_address;
+              if (addr) setContractAddress(addr);
+            }
+          } catch {}
+        })();
+      }
+    } catch {}
+  }, [api]);
 
   const loadAIEvals = async (rows: ClaimItem[]) => {
     const ids = rows.map((r) => r.claim_id);
@@ -156,6 +210,206 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
     unique.forEach((pid) => { if (!patientNames[pid]) fetchPatientName(pid); });
   };
 
+  const platformFeeBps = 1000; // 10%
+  const issuerFeePol = 0.01;
+  const totalSendPol = useMemo(() => {
+    const r = parseFloat(rewardPol || "0");
+    if (Number.isNaN(r)) return 0;
+    return Math.max(0, r) + issuerFeePol;
+  }, [rewardPol]);
+
+  // Deploy or set existing contract
+  const handleDeployOrSet = async () => {
+    if (!userId) return toast({ title: "Not logged in", description: "Missing user id", variant: "destructive" });
+    if (!userWallet) return toast({ title: "No wallet on profile", description: "Add your wallet to profile first.", variant: "destructive" });
+    setLoadingWeb3(true);
+    try {
+      // Enforce single contract per wallet: check backend first
+      try {
+        const chk = await fetch(`${api}/web3/contracts/by-wallet/${encodeURIComponent(userWallet)}`);
+        const jc = await chk.json();
+        const addr = jc?.contract?.contract_address;
+        if (addr && !existingAddress?.trim()) {
+          setContractAddress(addr);
+          setOpenDeploy(false);
+          toast({ title: "Contract already exists", description: `Using ${addr}` });
+          return;
+        }
+      } catch {}
+
+      let deployedAddress = existingAddress?.trim();
+      if (!deployedAddress) {
+        // Deploy
+        if (!hasContractArtifacts()) {
+          toast({ title: "Missing artifacts", description: "ABI/Bytecode not set in documentValidationBounty.ts", variant: "destructive" });
+          return;
+        }
+        const { ethers } = await import("ethers");
+        // @ts-ignore
+        const provider = new ethers.BrowserProvider((window as any).ethereum);
+        const signer = await provider.getSigner();
+        const factory = new ethers.ContractFactory(CONTRACT_ABI, CONTRACT_BYTECODE, signer);
+        const contract = await factory.deploy();
+        await contract.waitForDeployment();
+        deployedAddress = await contract.getAddress();
+      }
+
+      // Persist
+      const resp = await fetch(`${api}/web3/contracts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: userId, wallet_address: userWallet, contract_address: deployedAddress })
+      });
+      if (!resp.ok) {
+        const j = await resp.json().catch(() => ({} as any));
+        if (resp.status === 409) {
+          // Someone tried to deploy again; use existing by wallet
+          try {
+            const chk = await fetch(`${api}/web3/contracts/by-wallet/${encodeURIComponent(userWallet)}`);
+            const jc = await chk.json();
+            const addr = jc?.contract?.contract_address;
+            if (addr) {
+              setContractAddress(addr);
+              setOpenDeploy(false);
+              toast({ title: "Contract exists", description: `Using ${addr}` });
+              return;
+            }
+          } catch {}
+        }
+        throw new Error(j?.detail || "save_contract failed");
+      }
+      setContractAddress(deployedAddress);
+      setOpenDeploy(false);
+      toast({ title: "Contract ready", description: `Using ${deployedAddress}` });
+    } catch (e: any) {
+      console.error(e);
+      toast({ title: "Contract setup failed", description: e?.message || "Error", variant: "destructive" });
+    } finally {
+      setLoadingWeb3(false);
+    }
+  };
+
+  const openCreateTask = () => {
+    const ids = Object.keys(selected).filter((k) => selected[Number(k)]).map((k) => Number(k));
+    if (ids.length !== 1) {
+      toast({ title: "Select one document", description: "Pick exactly one to create a task.", variant: "destructive" });
+      return;
+    }
+    const row = items.find((r) => r.claim_id === ids[0]);
+    // Use report_url as docCid for now (or you can transform to IPFS CID upstream)
+    setSelectedDocCid(row?.report_url || "");
+    setOpenTask(true);
+  };
+
+  const handleCreateTask = async () => {
+    if (!userId) return toast({ title: "Not logged in", description: "Missing user id", variant: "destructive" });
+    if (!contractAddress) return toast({ title: "No contract", description: "Deploy or set a contract first.", variant: "destructive" });
+    if (!issuerWallet || !selectedDocCid || requiredValidators <= 0) return toast({ title: "Missing fields", description: "Provide issuer wallet, validators and doc CID.", variant: "destructive" });
+    setLoadingWeb3(true);
+    try {
+      const { ethers } = await import("ethers");
+      // @ts-ignore
+      const provider = new ethers.BrowserProvider((window as any).ethereum);
+      const signer = await provider.getSigner();
+
+      // Use centralized ABI
+      if (!Array.isArray(CONTRACT_ABI) || CONTRACT_ABI.length === 0) {
+        toast({ title: "ABI missing", description: "Set ABI in documentValidationBounty.ts", variant: "destructive" });
+        return;
+      }
+      const contract = new ethers.Contract(contractAddress, CONTRACT_ABI, signer);
+      let valueWei: bigint;
+      try {
+        valueWei = ethers.parseEther(totalSendPol.toString());
+      } catch {
+        throw new Error("Invalid reward amount");
+      }
+
+      // Preflight: try static call and gas estimate to surface revert reasons early
+      try {
+        // staticCall in ethers v6
+        await contract.createTask.staticCall(
+          selectedDocCid,
+          BigInt(requiredValidators),
+          issuerWallet,
+          { value: valueWei }
+        );
+        await contract.createTask.estimateGas(
+          selectedDocCid,
+          BigInt(requiredValidators),
+          issuerWallet,
+          { value: valueWei }
+        );
+      } catch (err: any) {
+        const msg = err?.shortMessage || err?.reason || err?.message || "Transaction would fail (revert)";
+        throw new Error(`Preflight failed: ${msg}`);
+      }
+
+      // Send tx
+      const tx = await contract.createTask(
+        selectedDocCid,
+        BigInt(requiredValidators),
+        issuerWallet,
+        { value: valueWei }
+      );
+      const rc = await tx.wait();
+
+      // Parse TaskCreated event to get taskId and rewardWei
+      // Fallback: try reading nextTaskId-1
+      let onchainTaskId: number | null = null;
+      let rewardWeiNum: number | null = null;
+      try {
+        for (const lg of rc.logs || []) {
+          try {
+            const parsed = contract.interface.parseLog({ topics: lg.topics, data: lg.data });
+            if (parsed?.name === "TaskCreated") {
+              onchainTaskId = Number(parsed.args?.taskId);
+              rewardWeiNum = Number(parsed.args?.rewardWei);
+              break;
+            }
+          } catch {}
+        }
+      } catch {}
+      if (onchainTaskId == null) {
+        // Try reading last taskId via nextTaskId - 1
+        try {
+          const next = await contract.nextTaskId();
+          onchainTaskId = Number(next) - 1;
+        } catch {}
+      }
+
+      // Persist task
+      const persist = await fetch(`${api}/web3/tasks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: userId,
+          contract_address: contractAddress,
+          task_id: onchainTaskId ?? 0,
+          doc_cid: selectedDocCid,
+          required_validators: requiredValidators,
+          reward_wei: rewardWeiNum ?? 0,
+          issuer_wallet: issuerWallet,
+          tx_hash: tx.hash,
+        })
+      });
+      if (!persist.ok) throw new Error("save_task failed");
+
+      setOpenTask(false);
+      toast({ title: "Task created", description: `Task #${onchainTaskId ?? "?"} created` });
+    } catch (e: any) {
+      console.error(e);
+      let desc = e?.message || "Error";
+      // Surface common MetaMask JSON-RPC error details if available
+      const info = (e?.info || {}) as any;
+      const errObj = info?.error || e?.error || {};
+      if (errObj?.message && !desc.includes(errObj.message)) desc = `${desc} — ${errObj.message}`;
+      toast({ title: "Create task failed", description: desc, variant: "destructive" });
+    } finally {
+      setLoadingWeb3(false);
+    }
+  };
+
   const pageNumbers = useMemo(() => {
     const maxButtons = 5;
     const pages: (number | string)[] = [];
@@ -208,6 +462,29 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
                   <SelectItem value="20">20</SelectItem>
                 </SelectContent>
               </Select>
+              <Dialog open={openDeploy} onOpenChange={setOpenDeploy}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm">{contractAddress ? "View Contract" : "Setup Contract"}</Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[600px]">
+                  <DialogHeader>
+                    <DialogTitle>Contract Setup</DialogTitle>
+                    <DialogDescription>
+                      Use an existing contract address or deploy a new one (only once per wallet). Your wallet: {userWallet || "unknown"}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-3 py-2">
+                    <div className="grid gap-1">
+                      <Label>Existing Contract Address (optional)</Label>
+                      <Input value={existingAddress} onChange={(e) => setExistingAddress(e.target.value)} placeholder="0x..." />
+                    </div>
+                    <div className="text-xs text-muted-foreground">ABI/Bytecode are read from <code>lib/contracts/documentValidationBounty.ts</code>.</div>
+                  </div>
+                  <DialogFooter>
+                    <Button onClick={handleDeployOrSet} disabled={loadingWeb3}>{loadingWeb3 ? "Please wait..." : "Use / Deploy"}</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
 
@@ -273,10 +550,46 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
             <div className="ml-auto flex flex-wrap items-center gap-2">
               <Button variant="secondary" onClick={approveSelected} disabled={loading}>Approve Selected</Button>
               <Button variant="destructive" onClick={rejectSelected} disabled={loading}>Reject Selected</Button>
+              <Button onClick={openCreateTask} disabled={loading || !contractAddress}>Create Task</Button>
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Create Task Modal */}
+      <Dialog open={openTask} onOpenChange={setOpenTask}>
+        <DialogContent className="sm:max-w-[560px]">
+          <DialogHeader>
+            <DialogTitle>Create Validation Task</DialogTitle>
+            <DialogDescription>
+              Platform fee: 10% of reward pool. Issuer fee: 0.01 POL added on top. Total to send = reward + 0.01 POL.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3 py-2">
+            <div className="grid gap-1">
+              <Label>Document CID / URL</Label>
+              <Input value={selectedDocCid} onChange={(e) => setSelectedDocCid(e.target.value)} placeholder="ipfs://... or https://..." />
+            </div>
+            <div className="grid gap-1">
+              <Label>Required Validators</Label>
+              <Input type="number" min={1} value={requiredValidators} onChange={(e) => setRequiredValidators(Number(e.target.value))} />
+            </div>
+            <div className="grid gap-1">
+              <Label>Reward (POL) — platform takes 10% on finalize</Label>
+              <Input type="number" min={0} step="0.0001" value={rewardPol} onChange={(e) => setRewardPol(e.target.value)} />
+              <div className="text-xs text-muted-foreground">Issuer fee fixed at 0.01 POL. Total to send now: {totalSendPol.toFixed(4)} POL</div>
+            </div>
+            <div className="grid gap-1">
+              <Label>Issuer Wallet Address</Label>
+              <Input value={issuerWallet} onChange={(e) => setIssuerWallet(e.target.value)} placeholder="0x..." />
+            </div>
+            <div className="text-xs text-muted-foreground">Contract ABI loaded from <code>lib/contracts/documentValidationBounty.ts</code>.</div>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleCreateTask} disabled={loadingWeb3 || !contractAddress}>{loadingWeb3 ? "Creating..." : "Create Task"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
