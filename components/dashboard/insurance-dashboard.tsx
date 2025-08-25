@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -38,11 +38,19 @@ import {
   Wallet,
   FileChartColumn,
 } from "lucide-react";
+import ActiveClaims from "@/components/insurance/active-claims";
+import ApprovedClaims from "@/components/insurance/approved-claims";
+import FraudAlerts from "@/components/insurance/fraud-alerts";
+import { config } from "@/lib/config";
 
 type QueueItem = { id: string; name: string; priority: "Urgent" | "High" | "Normal"; etaMin: number };
 type AlertItem = { id: string; severity: "Critical" | "High" | "Medium"; title: string; pattern: string };
 
 export function InsuranceDashboard() {
+  const api = useMemo(() => (config.apiBaseUrl || "http://127.0.0.1:8000") + "/api", []);
+  const [selectedView, setSelectedView] = useState<"dashboard" | "active" | "approved" | "fraud">("dashboard");
+  const [insuranceId, setInsuranceId] = useState<number | null>(null);
+  const [resolving, setResolving] = useState<boolean>(false);
   // Animated counters (mocked)
   const [tick, setTick] = useState(0);
   useEffect(() => {
@@ -68,6 +76,47 @@ export function InsuranceDashboard() {
   ];
 
   const validatorsActive = 18;
+
+  // Resolve insuranceId from cookie/localStorage, with API fallback
+  useEffect(() => {
+    const getCookie = (name: string) => {
+      if (typeof document === "undefined") return null;
+      const match = document.cookie.match(new RegExp("(?:^|; )" + name.replace(/([.$?*|{}()\[\]\\\/\+^])/g, "\\$1") + "=([^;]*)"));
+      return match ? decodeURIComponent(match[1]) : null;
+    };
+    const userIdStr = (typeof window !== "undefined" && window.localStorage.getItem("user_id")) || getCookie("user_id");
+    const insuranceUserIdStr = getCookie("insurance_user_id");
+    const cachedInsuranceId = getCookie("insurance_id");
+    if (cachedInsuranceId) {
+      const n = Number(cachedInsuranceId);
+      if (!Number.isNaN(n)) setInsuranceId(n);
+    }
+    const tryResolve = async () => {
+      const candidateUserId = insuranceUserIdStr || userIdStr;
+      if (!candidateUserId) return;
+      const uid = Number(candidateUserId);
+      if (Number.isNaN(uid)) return;
+      setResolving(true);
+      try {
+        const res = await fetch(`${api}/insurance/by-user/${uid}`);
+        if (res.ok) {
+          const j = await res.json();
+          if (j?.insurance_id) {
+            setInsuranceId(j.insurance_id);
+            // cache as cookie for faster reloads
+            try { document.cookie = `insurance_id=${j.insurance_id}; path=/`; } catch {}
+          }
+        }
+      } catch (e) {
+        console.error("resolve insurance by user failed", e);
+      } finally {
+        setResolving(false);
+      }
+    };
+    if (!insuranceId) {
+      tryResolve();
+    }
+  }, [api, insuranceId]);
 
   const handleLogout = () => {
     try {
@@ -109,7 +158,7 @@ export function InsuranceDashboard() {
                 <SidebarGroupContent>
                   <SidebarMenu>
                     <SidebarMenuItem>
-                      <SidebarMenuButton className="justify-start" isActive><LayoutDashboard /> <span>Dashboard</span></SidebarMenuButton>
+                      <SidebarMenuButton className="justify-start" isActive={selectedView === "dashboard"} onClick={() => setSelectedView("dashboard")}><LayoutDashboard /> <span>Dashboard</span></SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
                       <SidebarMenuButton className="justify-start"><BarChart3 /> <span>Analytics</span></SidebarMenuButton>
@@ -143,13 +192,13 @@ export function InsuranceDashboard() {
                 <SidebarGroupContent>
                   <SidebarMenu>
                     <SidebarMenuItem>
-                      <SidebarMenuButton className="justify-start"><Files /> <span>Active Claims</span></SidebarMenuButton>
+                      <SidebarMenuButton className="justify-start" isActive={selectedView === "active"} onClick={() => setSelectedView("active")}><Files /> <span>Active Claims</span></SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
-                      <SidebarMenuButton className="justify-start"><FileChartColumn /> <span>Approved Claims</span></SidebarMenuButton>
+                      <SidebarMenuButton className="justify-start" isActive={selectedView === "approved"} onClick={() => setSelectedView("approved")}><FileChartColumn /> <span>Approved Claims</span></SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
-                      <SidebarMenuButton className="justify-start"><AlertTriangle /> <span>Fraud Alerts</span></SidebarMenuButton>
+                      <SidebarMenuButton className="justify-start" isActive={selectedView === "fraud"} onClick={() => setSelectedView("fraud")}><AlertTriangle /> <span>Fraud Alerts</span></SidebarMenuButton>
                     </SidebarMenuItem>
                   </SidebarMenu>
                 </SidebarGroupContent>
@@ -219,8 +268,24 @@ export function InsuranceDashboard() {
             </header>
 
             <main className="pl-4 pr-0 py-6 w-full max-w-full">
-              {/* Executive Metrics (Bento Grid) */}
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              {selectedView !== "dashboard" ? (
+                <div className="max-w-full">
+                  {insuranceId ? (
+                    selectedView === "active" ? (
+                      <ActiveClaims insuranceId={insuranceId} />
+                    ) : selectedView === "approved" ? (
+                      <ApprovedClaims insuranceId={insuranceId} />
+                    ) : (
+                      <FraudAlerts insuranceId={insuranceId} />
+                    )
+                  ) : (
+                    <div className="text-sm text-muted-foreground">{resolving ? "Resolving insurance account..." : "Insurance account not found."}</div>
+                  )}
+                </div>
+              ) : (
+                <>
+                  {/* Executive Metrics (Bento Grid) */}
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <Card className="border-border bg-foreground/5">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base">Documents Verified Today</CardTitle>
@@ -409,6 +474,8 @@ export function InsuranceDashboard() {
                   </Tabs>
                 </CardContent>
               </Card>
+                </>
+              )}
             </main>
           </SidebarInset>
         </div>
