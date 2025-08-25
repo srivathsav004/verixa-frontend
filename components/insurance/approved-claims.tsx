@@ -6,6 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { config } from "@/lib/config";
 
 export type InsuranceClaim = {
@@ -24,6 +26,10 @@ export default function ApprovedClaims({ insuranceId }: { insuranceId: number })
   const [data, setData] = useState<InsuranceClaim[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [nameMap, setNameMap] = useState<Record<number, string>>({});
+  const [issuerMap, setIssuerMap] = useState<Record<number, string>>({});
+  const [verifiedFilter, setVerifiedFilter] = useState<"all" | "verified" | "unverified">("all");
+  const [search, setSearch] = useState("");
 
   const fetchClaims = async () => {
     setLoading(true);
@@ -31,7 +37,33 @@ export default function ApprovedClaims({ insuranceId }: { insuranceId: number })
       const res = await fetch(`${api}/claims/by-insurance/${insuranceId}?status=approved`);
       if (!res.ok) throw new Error(`failed claims: ${res.status}`);
       const j = await res.json();
-      setData(j.items || []);
+      const items: InsuranceClaim[] = j.items || [];
+      setData(items);
+      // names
+      const uniqPatientIds = Array.from(new Set(items.map((i) => i.patient_id)));
+      const toFetch = uniqPatientIds.filter((pid) => !(pid in nameMap));
+      await Promise.all(toFetch.map(async (pid) => {
+        try {
+          const r = await fetch(`${api}/patient/${pid}/basic-info`);
+          if (r.ok) {
+            const pj = await r.json();
+            const full = `${pj.first_name || ""} ${pj.last_name || ""}`.trim() || `#${pid}`;
+            setNameMap((m) => ({ ...m, [pid]: full }));
+          }
+        } catch {}
+      }));
+      // issuers
+      const uniqIssuerIds = Array.from(new Set(items.map((i) => i.issued_by).filter((v) => v != null))) as number[];
+      const toFetchIss = uniqIssuerIds.filter((iid) => !(iid in issuerMap));
+      await Promise.all(toFetchIss.map(async (iid) => {
+        try {
+          const r = await fetch(`${api}/issuer/${iid}/basic-info`);
+          if (r.ok) {
+            const ij = await r.json();
+            setIssuerMap((m) => ({ ...m, [iid]: ij.organization_name || `Issuer #${iid}` }));
+          }
+        } catch {}
+      }));
     } catch (e) {
       console.error(e);
     } finally {
@@ -59,6 +91,19 @@ export default function ApprovedClaims({ insuranceId }: { insuranceId: number })
 
   const prettyDate = (iso: string) => { try { return new Date(iso).toLocaleString(); } catch { return iso; } };
 
+  const filtered = useMemo(() => {
+    let arr = data.slice();
+    if (verifiedFilter !== "all") {
+      const flag = verifiedFilter === "verified";
+      arr = arr.filter((d) => d.is_verified === flag);
+    }
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      arr = arr.filter((d) => (nameMap[d.patient_id]?.toLowerCase() || "").includes(q));
+    }
+    return arr;
+  }, [data, verifiedFilter, search, nameMap]);
+
   return (
     <Card className="border-border">
       <CardHeader>
@@ -66,11 +111,22 @@ export default function ApprovedClaims({ insuranceId }: { insuranceId: number })
         <CardDescription>Claims marked as approved</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-3">
           <div className="text-sm text-muted-foreground">Insurance ID: {insuranceId}</div>
-          <Button size="sm" variant="outline" onClick={refresh} disabled={refreshing || loading}>
-            {refreshing ? "Refreshing..." : "Refresh"}
-          </Button>
+          <div className="flex flex-wrap gap-2 items-center">
+            <Select value={verifiedFilter} onValueChange={(v) => setVerifiedFilter(v as any)}>
+              <SelectTrigger className="w-[160px]"><SelectValue placeholder="Verified filter" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="verified">Verified only</SelectItem>
+                <SelectItem value="unverified">Unverified only</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input placeholder="Search patient" className="w-[200px]" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <Button size="sm" variant="outline" onClick={refresh} disabled={refreshing || loading}>
+              {refreshing ? "Refreshing..." : "Refresh"}
+            </Button>
+          </div>
         </div>
 
         {loading ? (
@@ -85,8 +141,9 @@ export default function ApprovedClaims({ insuranceId }: { insuranceId: number })
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[90px]">Claim #</TableHead>
+                  <TableHead className="w-[70px]">S.No.</TableHead>
                   <TableHead>Patient</TableHead>
+                  <TableHead>Issuer</TableHead>
                   <TableHead>Verified</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Created</TableHead>
@@ -94,10 +151,11 @@ export default function ApprovedClaims({ insuranceId }: { insuranceId: number })
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.map((c) => (
+                {filtered.map((c, idx) => (
                   <TableRow key={c.claim_id} className="hover:bg-foreground/5">
-                    <TableCell className="font-medium">{c.claim_id}</TableCell>
-                    <TableCell>#{c.patient_id}</TableCell>
+                    <TableCell className="font-medium">{idx + 1}</TableCell>
+                    <TableCell>{nameMap[c.patient_id] || `#${c.patient_id}`}</TableCell>
+                    <TableCell>{c.issued_by ? (issuerMap[c.issued_by] || `#${c.issued_by}`) : "N/A"}</TableCell>
                     <TableCell>
                       <Badge variant={c.is_verified ? "secondary" : "outline"}>{c.is_verified ? "Verified" : "Unverified"}</Badge>
                     </TableCell>
