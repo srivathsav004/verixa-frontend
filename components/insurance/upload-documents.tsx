@@ -17,6 +17,9 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { config } from "@/lib/config";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { AI_PAYMENT_ABI, AI_PAYMENT_BYTECODE } from "@/lib/contracts/ai_payment_contract";
 
 export type UploadDocumentsProps = { insuranceId: number };
 
@@ -68,6 +71,14 @@ export default function UploadDocuments({ insuranceId }: UploadDocumentsProps) {
   const [patientNames, setPatientNames] = useState<Record<number, string>>({});
   const [bucketFilter, setBucketFilter] = useState<"all" | "auto" | "manual" | "reject">("all");
 
+  // web3 + contract setup state
+  const [userId, setUserId] = useState<number | null>(null);
+  const [userWallet, setUserWallet] = useState<string | null>(null);
+  const [aiContractAddress, setAiContractAddress] = useState<string | null>(null);
+  const [openDeploy, setOpenDeploy] = useState(false);
+  const [existingAddress, setExistingAddress] = useState<string>("");
+  const [loadingWeb3, setLoadingWeb3] = useState(false);
+
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const start = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const end = Math.min(total, page * pageSize);
@@ -85,7 +96,174 @@ export default function UploadDocuments({ insuranceId }: UploadDocumentsProps) {
         console.error("threshold fetch failed", e);
       }
     };
+
     if (insuranceId) loadThresholds();
+  }, [api, insuranceId]);
+
+  // Deploy or set AI Payment contract (only once per insurance wallet)
+  const handleDeployAIContract = async () => {
+    if (!userId) return toast({ title: "Not logged in", description: "Missing user id", variant: "destructive" });
+    if (!userWallet) return toast({ title: "No wallet on profile", description: "Add your wallet to profile first.", variant: "destructive" });
+    setLoadingWeb3(true);
+    try {
+      // short-circuit if contract already exists and no override provided
+      try {
+        if (!existingAddress?.trim()) {
+          const chk = await fetch(`${api}/web3/contracts/by-wallet/${encodeURIComponent(userWallet)}`);
+          if (chk.ok) {
+            const jc = await chk.json();
+            const addr = jc?.contract?.ai_contract || jc?.contract?.contract_address;
+            if (addr) {
+              setAiContractAddress(addr);
+              setOpenDeploy(false);
+              toast({ title: "Contract already exists", description: `Using ${addr}` });
+              return;
+            }
+          }
+        }
+      } catch {}
+
+      let deployedAddress = existingAddress?.trim();
+      if (!deployedAddress) {
+        if (!Array.isArray(AI_PAYMENT_ABI) || AI_PAYMENT_ABI.length === 0 || typeof AI_PAYMENT_BYTECODE !== "string" || AI_PAYMENT_BYTECODE.length < 10) {
+          toast({ title: "Missing artifacts", description: "Set ABI/Bytecode in ai_payment_contract.ts", variant: "destructive" });
+          return;
+        }
+        const { ethers } = await import("ethers");
+        // @ts-ignore
+        const provider = new ethers.BrowserProvider((window as any).ethereum);
+        // Ensure wallet access
+        try { await provider.send("eth_requestAccounts", []); } catch (reqErr) {
+          throw new Error("Wallet access rejected");
+        }
+        // Ensure on Polygon Amoy (testnet) or Polygon mainnet
+        const targetChains = new Set([0x13882, 0x89]); // Amoy, Mainnet
+        let network = await provider.getNetwork();
+        if (!targetChains.has(Number(network.chainId))) {
+          try {
+            await (window as any).ethereum.request({
+              method: "wallet_switchEthereumChain",
+              params: [{ chainId: "0x13882" }], // default to Amoy
+            });
+            network = await provider.getNetwork();
+          } catch (switchErr: any) {
+            // Try add Amoy
+            try {
+              await (window as any).ethereum.request({
+                method: "wallet_addEthereumChain",
+                params: [{
+                  chainId: "0x13882",
+                  chainName: "Polygon Amoy",
+                  nativeCurrency: { name: "POL", symbol: "POL", decimals: 18 },
+                  rpcUrls: ["https://rpc-amoy.polygon.technology"],
+                  blockExplorerUrls: ["https://www.oklink.com/amoy"],
+                }],
+              });
+              network = await provider.getNetwork();
+            } catch {
+              throw new Error("Please switch to Polygon Amoy/Mainnet in MetaMask");
+            }
+          }
+        }
+        const signer = await provider.getSigner();
+        const factory = new ethers.ContractFactory(AI_PAYMENT_ABI as any, AI_PAYMENT_BYTECODE, signer);
+        // Build deploy tx and estimate gas via signer
+        const deployTx = await factory.getDeployTransaction();
+        const gasLimit = await signer.estimateGas(deployTx as any).catch(() => undefined);
+        if (!gasLimit) throw new Error("Gas estimation failed. Ensure you have test POL and correct network.");
+        // Simple balance preflight
+        const fromAddr = await signer.getAddress();
+        const balance = await provider.getBalance(fromAddr);
+        if (String(balance) === "0") throw new Error("Insufficient POL to pay gas");
+        // Deploy with explicit gasLimit only (let wallet fill fees)
+        const contract = await factory.deploy({ gasLimit } as any);
+        await contract.waitForDeployment();
+        deployedAddress = await contract.getAddress();
+      }
+
+      // Persist to insurance-scoped endpoint if available
+      let saved = false;
+      try {
+        if (insuranceId) {
+          const r = await fetch(`${api}/insurance/${insuranceId}/ai-contract`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: userId, wallet_address: userWallet, ai_contract: deployedAddress })
+          });
+          if (r.ok) saved = true;
+        }
+      } catch {}
+      if (!saved) {
+        // Fallback to generic web3 contract save endpoint if present
+        const r2 = await fetch(`${api}/web3/contracts`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: userId, wallet_address: userWallet, ai_contract: deployedAddress, contract_address: deployedAddress })
+        });
+        if (!r2.ok) {
+          const j = await r2.json().catch(() => ({} as any));
+          throw new Error(j?.detail || "save_ai_contract failed");
+        }
+      }
+
+      setAiContractAddress(deployedAddress);
+      setOpenDeploy(false);
+      toast({ title: "AI Contract ready", description: `Using ${deployedAddress}` });
+    } catch (e: any) {
+      console.error(e);
+      toast({ title: "Contract setup failed", description: e?.message || "Error", variant: "destructive" });
+    } finally {
+      setLoadingWeb3(false);
+    }
+  };
+
+  // Resolve user_id and wallet + try fetch existing AI contract address
+  useEffect(() => {
+    const getCookie = (name: string) => {
+      if (typeof document === "undefined") return null;
+      const match = document.cookie.match(new RegExp("(?:^|; )" + name.replace(/([.$?*|{}()\[\\]\\\/\+^])/g, "\\$1") + "=([^;]*)"));
+      return match ? decodeURIComponent(match[1]) : null;
+    };
+    const userIdStr = (typeof window !== "undefined" && window.localStorage.getItem("user_id")) || getCookie("user_id");
+    const uid = userIdStr ? Number(userIdStr) : NaN;
+    if (!Number.isNaN(uid)) setUserId(uid);
+
+    const fetchUserAndContract = async () => {
+      try {
+        // fetch wallet from users table
+        if (!Number.isNaN(uid)) {
+          const u = await fetch(`${api}/users/${uid}`);
+          if (u.ok) {
+            const ju = await u.json();
+            setUserWallet(ju?.wallet_address || null);
+          }
+        }
+      } catch {}
+      // try to resolve existing ai contract from backend (prefer insurance-scoped endpoint if present)
+      try {
+        if (insuranceId) {
+          const r1 = await fetch(`${api}/insurance/${insuranceId}/ai-contract`);
+          if (r1.ok) {
+            const j1 = await r1.json();
+            const addr = j1?.ai_contract || j1?.contract_address || null;
+            if (addr) { setAiContractAddress(addr); return; }
+          }
+        }
+      } catch {}
+      try {
+        // fallback by wallet (if backend exposes generic lookup)
+        if (userWallet) {
+          const r2 = await fetch(`${api}/web3/contracts/by-wallet/${encodeURIComponent(userWallet)}`);
+          if (r2.ok) {
+            const j2 = await r2.json();
+            const addr = j2?.contract?.ai_contract || j2?.contract?.contract_address || null;
+            if (addr) setAiContractAddress(addr);
+          }
+        }
+      } catch {}
+    };
+    fetchUserAndContract();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [api, insuranceId]);
 
   const fetchClaims = async () => {
@@ -172,6 +350,12 @@ export default function UploadDocuments({ insuranceId }: UploadDocumentsProps) {
   };
 
   const generateScores = async () => {
+    // Require AI payment contract once
+    if (!aiContractAddress) {
+      setOpenDeploy(true);
+      toast({ title: "AI Contract required", description: "Please deploy the AI Payment contract once before generating scores.", variant: "default", className: "bg-muted text-foreground" });
+      return;
+    }
     const selIds = Object.entries(selected).filter(([, v]) => v).map(([k]) => Number(k));
     if (selIds.length === 0) {
       toast({ title: "Select claims first", description: "Pick one or more rows to score.", variant: "default", className: "bg-muted text-foreground" });
@@ -367,6 +551,32 @@ const applyBucketAction = async () => {
                   <SelectItem value="20">20</SelectItem>
                 </SelectContent>
               </Select>
+              <Dialog open={openDeploy} onOpenChange={setOpenDeploy}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm">{aiContractAddress ? "View AI Contract" : "Setup AI Contract"}</Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[600px]">
+                  <DialogHeader>
+                    <DialogTitle>AI Payment Contract</DialogTitle>
+                    <DialogDescription>
+                      Deploy once and reuse forever. Your wallet: {userWallet || "unknown"}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-3 py-2">
+                    <div className="grid gap-1">
+                      <Label>Existing Contract Address (optional)</Label>
+                      <Input value={existingAddress} onChange={(e) => setExistingAddress(e.target.value)} placeholder="0x..." />
+                    </div>
+                    {aiContractAddress && (
+                      <div className="text-xs text-muted-foreground break-all">Current: {aiContractAddress}</div>
+                    )}
+                    <div className="text-xs text-muted-foreground">Artifacts loaded from <code>lib/contracts/ai_payment_contract.ts</code>. This is a one-time setup.</div>
+                  </div>
+                  <DialogFooter>
+                    <Button onClick={handleDeployAIContract} disabled={loadingWeb3}>{loadingWeb3 ? "Please wait..." : "Use / Deploy"}</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
 
@@ -442,7 +652,7 @@ const applyBucketAction = async () => {
             </Pagination>
 
             <div className="ml-auto flex flex-wrap items-center gap-2">
-              <Button variant="secondary" onClick={generateScores}>Generate AI Scores</Button>
+              <Button variant="secondary" onClick={generateScores}>{aiContractAddress ? "Generate AI Scores" : "Generate AI Scores"}</Button>
               <Select value={bucketFilter} onValueChange={(v) => setBucketFilter(v as any)}>
                 <SelectTrigger className="w-[160px]"><SelectValue placeholder="Bucket" /></SelectTrigger>
                 <SelectContent>
