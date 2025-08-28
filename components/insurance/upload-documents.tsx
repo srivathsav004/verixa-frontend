@@ -75,6 +75,7 @@ export default function UploadDocuments({ insuranceId }: UploadDocumentsProps) {
   const [userId, setUserId] = useState<number | null>(null);
   const [userWallet, setUserWallet] = useState<string | null>(null);
   const [aiContractAddress, setAiContractAddress] = useState<string | null>(null);
+  const [contractLoading, setContractLoading] = useState<boolean>(true);
   const [openDeploy, setOpenDeploy] = useState(false);
   const [consentChecked, setConsentChecked] = useState(false);
   const [loadingWeb3, setLoadingWeb3] = useState(false);
@@ -231,6 +232,7 @@ export default function UploadDocuments({ insuranceId }: UploadDocumentsProps) {
     if (!Number.isNaN(uid)) setUserId(uid);
 
     const fetchUserAndContract = async () => {
+      setContractLoading(true);
       let resolvedWallet: string | null = null;
       try {
         // fetch wallet from users table
@@ -255,6 +257,9 @@ export default function UploadDocuments({ insuranceId }: UploadDocumentsProps) {
           }
         }
       } catch {}
+      finally {
+        setContractLoading(false);
+      }
     };
     fetchUserAndContract();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -654,7 +659,9 @@ const applyBucketAction = async () => {
               </Select>
               <Dialog open={openDeploy} onOpenChange={setOpenDeploy}>
                 <DialogTrigger asChild>
-                <Button variant="outline" size="sm">{aiContractAddress ? "Show AI Contract" : "Setup AI Contract"}</Button>
+                <Button variant="outline" size="sm" disabled={contractLoading}>
+                  {contractLoading ? "Loading..." : (aiContractAddress ? "Show AI Contract" : "Setup AI Contract")}
+                </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[600px]">
                 <DialogHeader>

@@ -80,6 +80,7 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
   const [userId, setUserId] = useState<number | null>(null);
   const [userWallet, setUserWallet] = useState<string | null>(null);
   const [contractAddress, setContractAddress] = useState<string | null>(null);
+  const [contractLoading, setContractLoading] = useState<boolean>(true);
   const [loadingWeb3, setLoadingWeb3] = useState(false);
 
   // Deploy modal state
@@ -247,6 +248,7 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
     if (!Number.isNaN(uid)) setUserId(uid);
 
     const fetchUserAndContract = async () => {
+      setContractLoading(true);
       let walletAddr: string | null = null;
       try {
         if (!Number.isNaN(uid)) {
@@ -270,6 +272,9 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
           }
         }
       } catch {}
+      finally {
+        setContractLoading(false);
+      }
     };
     fetchUserAndContract();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -554,7 +559,9 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
               </Select>
               <Dialog open={openDeploy} onOpenChange={setOpenDeploy}>
                 <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">{contractAddress ? "Show Validation Contract" : "Setup Validation Contract"}</Button>
+                  <Button variant="outline" size="sm" disabled={contractLoading}>
+                    {contractLoading ? "Loading..." : (contractAddress ? "Show Validation Contract" : "Setup Validation Contract")}
+                  </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[600px]">
                   <DialogHeader>
