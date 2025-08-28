@@ -616,13 +616,13 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
               Showing {start}-{end} of {currentTotal}
             </div>
             <div className="ml-auto flex items-center gap-2">
-              <Select value={viewMode} onValueChange={(v) => { setPage(1); setSelected({}); setViewMode(v as any); }}>
+              {/* <Select value={viewMode} onValueChange={(v) => { setPage(1); setSelected({}); setViewMode(v as any); }}>
                 <SelectTrigger className="w-[180px]"><SelectValue placeholder="View" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="unassigned">To Review (no task)</SelectItem>
                   <SelectItem value="queue">Verification Queue</SelectItem>
                 </SelectContent>
-              </Select>
+              </Select> */}
               <Input placeholder="Search by URL" value={search} onChange={(e) => { setPage(1); setSearch(e.target.value); }} className="w-56" />
               <Select value={String(pageSize)} onValueChange={(v) => { setPage(1); setPageSize(Number(v)); }}>
                 <SelectTrigger className="w-[100px]"><SelectValue placeholder="Page size" /></SelectTrigger>
