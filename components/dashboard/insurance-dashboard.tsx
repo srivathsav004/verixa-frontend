@@ -186,9 +186,9 @@ export function InsuranceDashboard() {
                     <SidebarMenuItem>
                       <SidebarMenuButton className="justify-start" isActive={selectedView === "vqueue"} onClick={() => setSelectedView("vqueue")}><ShieldCheck /> <span>Verification Queue</span></SidebarMenuButton>
                     </SidebarMenuItem>
-                    <SidebarMenuItem>
+                    {/* <SidebarMenuItem>
                       <SidebarMenuButton className="justify-start"><FolderUp /> <span>Bulk Upload</span></SidebarMenuButton>
-                    </SidebarMenuItem>
+                    </SidebarMenuItem> */}
                   </SidebarMenu>
                 </SidebarGroupContent>
               </SidebarGroup>
