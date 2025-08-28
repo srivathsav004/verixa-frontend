@@ -84,7 +84,7 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
 
   // Deploy modal state
   const [openDeploy, setOpenDeploy] = useState(false);
-  const [existingAddress, setExistingAddress] = useState<string>("");
+  const [consentChecked, setConsentChecked] = useState(false);
 
   // Create task modal state
   const [openTask, setOpenTask] = useState(false);
@@ -92,7 +92,7 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
   const [selectedClaimId, setSelectedClaimId] = useState<number | null>(null);
   const [requiredValidators, setRequiredValidators] = useState<number>(1);
   const [rewardPol, setRewardPol] = useState<string>("0");
-  const [issuerWallet, setIssuerWallet] = useState<string>("");
+  // issuer wallet removed
 
   // View mode: 'unassigned' (no task yet) or 'queue' (has task)
   const [viewMode, setViewMode] = useState<'unassigned' | 'queue'>('unassigned');
@@ -229,12 +229,51 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
   };
 
   const platformFeeBps = 1000; // 10%
-  const issuerFeePol = 0.01;
   const totalSendPol = useMemo(() => {
     const r = parseFloat(rewardPol || "0");
     if (Number.isNaN(r)) return 0;
-    return Math.max(0, r) + issuerFeePol;
+    return Math.max(0, r);
   }, [rewardPol]);
+
+  // Resolve user_id and wallet, and prefetch existing validation contract
+  useEffect(() => {
+    const getCookie = (name: string) => {
+      if (typeof document === "undefined") return null;
+      const match = document.cookie.match(new RegExp("(?:^|; )" + name.replace(/([.$?*|{}()\[\\]\\\/\+^])/g, "\\$1") + "=([^;]*)"));
+      return match ? decodeURIComponent(match[1]) : null;
+    };
+    const userIdStr = (typeof window !== "undefined" && window.localStorage.getItem("user_id")) || getCookie("user_id");
+    const uid = userIdStr ? Number(userIdStr) : NaN;
+    if (!Number.isNaN(uid)) setUserId(uid);
+
+    const fetchUserAndContract = async () => {
+      let walletAddr: string | null = null;
+      try {
+        if (!Number.isNaN(uid)) {
+          const u = await fetch(`${api}/users/${uid}`);
+          if (u.ok) {
+            const ju = await u.json();
+            walletAddr = (ju?.wallet_address || null);
+            setUserWallet(walletAddr);
+          }
+        }
+      } catch {}
+      // Fallback by wallet address to get existing validation contract
+      try {
+        const w = walletAddr || userWallet;
+        if (w) {
+          const r = await fetch(`${api}/web3/contracts/by-wallet/${encodeURIComponent(w)}`);
+          if (r.ok) {
+            const j = await r.json();
+            const addr = j?.contract?.validate_contract || null;
+            if (addr) setContractAddress(addr);
+          }
+        }
+      } catch {}
+    };
+    fetchUserAndContract();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [api, insuranceId]);
 
   // Deploy or set existing contract
   const handleDeployOrSet = async () => {
@@ -245,56 +284,80 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
       // Enforce single contract per wallet: check backend first
       try {
         const chk = await fetch(`${api}/web3/contracts/by-wallet/${encodeURIComponent(userWallet)}`);
-        const jc = await chk.json();
-        const addr = jc?.contract?.contract_address;
-        if (addr && !existingAddress?.trim()) {
-          setContractAddress(addr);
-          setOpenDeploy(false);
-          toast({ title: "Contract already exists", description: `Using ${addr}` });
-          return;
+        if (chk.ok) {
+          const jc = await chk.json();
+          const addr = jc?.contract?.validate_contract;
+          if (addr) {
+            setContractAddress(addr);
+            setOpenDeploy(false);
+            toast({ title: "Validation Contract", description: `Using ${addr}` });
+            return;
+          }
         }
       } catch {}
 
-      let deployedAddress = existingAddress?.trim();
-      if (!deployedAddress) {
-        // Deploy
-        if (!hasContractArtifacts()) {
-          toast({ title: "Missing artifacts", description: "ABI/Bytecode not set in documentValidationBounty.ts", variant: "destructive" });
-          return;
-        }
-        const { ethers } = await import("ethers");
-        // @ts-ignore
-        const provider = new ethers.BrowserProvider((window as any).ethereum);
-        const signer = await provider.getSigner();
-        const factory = new ethers.ContractFactory(CONTRACT_ABI, CONTRACT_BYTECODE, signer);
-        const contract = await factory.deploy();
-        await contract.waitForDeployment();
-        deployedAddress = await contract.getAddress();
+      let deployedAddress = "";
+      // Deploy
+      if (!hasContractArtifacts()) {
+        toast({ title: "Missing artifacts", description: "ABI/Bytecode not set in documentValidationBounty.ts", variant: "destructive" });
+        return;
       }
-
-      // Persist
-      const resp = await fetch(`${api}/web3/contracts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: userId, wallet_address: userWallet, contract_address: deployedAddress })
-      });
-      if (!resp.ok) {
-        const j = await resp.json().catch(() => ({} as any));
-        if (resp.status === 409) {
-          // Someone tried to deploy again; use existing by wallet
+      const { ethers } = await import("ethers");
+      // @ts-ignore
+      const provider = new ethers.BrowserProvider((window as any).ethereum);
+      // Ensure wallet access
+      try { await provider.send("eth_requestAccounts", []); } catch { throw new Error("Wallet access rejected"); }
+      // Ensure on Polygon Amoy (testnet) or Polygon mainnet
+      const targetChains = new Set([0x13882, 0x89]);
+      let network = await provider.getNetwork();
+      if (!targetChains.has(Number(network.chainId))) {
+        try {
+          await (window as any).ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0x13882" }] });
+          network = await provider.getNetwork();
+        } catch (switchErr: any) {
+          // Try add Amoy
           try {
-            const chk = await fetch(`${api}/web3/contracts/by-wallet/${encodeURIComponent(userWallet)}`);
-            const jc = await chk.json();
-            const addr = jc?.contract?.contract_address;
-            if (addr) {
-              setContractAddress(addr);
-              setOpenDeploy(false);
-              toast({ title: "Contract exists", description: `Using ${addr}` });
-              return;
-            }
-          } catch {}
+            await (window as any).ethereum.request({
+              method: "wallet_addEthereumChain",
+              params: [{
+                chainId: "0x13882",
+                chainName: "Polygon Amoy",
+                nativeCurrency: { name: "POL", symbol: "POL", decimals: 18 },
+                rpcUrls: ["https://rpc-amoy.polygon.technology"],
+                blockExplorerUrls: ["https://www.oklink.com/amoy"],
+              }],
+            });
+            network = await provider.getNetwork();
+          } catch {
+            throw new Error("Please switch to Polygon Amoy/Mainnet in MetaMask");
+          }
         }
-        throw new Error(j?.detail || "save_contract failed");
+      }
+      const signer = await provider.getSigner();
+      const factory = new ethers.ContractFactory(CONTRACT_ABI, CONTRACT_BYTECODE, signer);
+      // Estimate gas and deploy with explicit gasLimit to avoid RPC errors
+      const deployTx = await factory.getDeployTransaction();
+      const gasLimit = await signer.estimateGas(deployTx as any).catch(() => undefined);
+      if (!gasLimit) throw new Error("Gas estimation failed. Ensure you have POL and correct network.");
+      const contract = await factory.deploy({ gasLimit } as any);
+      await contract.waitForDeployment();
+      deployedAddress = await contract.getAddress();
+
+      // Persist once via unified contracts upsert (validate_contract)
+      try {
+        const resp = await fetch(`${api}/web3/contracts`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: userId, wallet_address: userWallet, validate_contract: deployedAddress })
+        });
+        if (!resp.ok) {
+          const j = await resp.json().catch(() => ({} as any));
+          console.warn("save_contract failed", j);
+          toast({ title: "Saved locally only", description: `Deploy succeeded (${deployedAddress}) but backend save failed. You can still use this contract.`, variant: "destructive" });
+        }
+      } catch (err) {
+        console.warn("save_contract error", err);
+        toast({ title: "Saved locally only", description: `Deploy succeeded (${deployedAddress}) but backend save failed.`, variant: "destructive" });
       }
       setContractAddress(deployedAddress);
       setOpenDeploy(false);
@@ -323,7 +386,7 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
   const handleCreateTask = async () => {
     if (!userId) return toast({ title: "Not logged in", description: "Missing user id", variant: "destructive" });
     if (!contractAddress) return toast({ title: "No contract", description: "Deploy or set a contract first.", variant: "destructive" });
-    if (!issuerWallet || !selectedDocCid || requiredValidators <= 0) return toast({ title: "Missing fields", description: "Provide issuer wallet, validators and doc CID.", variant: "destructive" });
+    if (!selectedDocCid || requiredValidators <= 0) return toast({ title: "Missing fields", description: "Provide validators and doc CID.", variant: "destructive" });
     setLoadingWeb3(true);
     try {
       const { ethers } = await import("ethers");
@@ -350,13 +413,11 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
         await contract.createTask.staticCall(
           selectedDocCid,
           BigInt(requiredValidators),
-          issuerWallet,
           { value: valueWei }
         );
         await contract.createTask.estimateGas(
           selectedDocCid,
           BigInt(requiredValidators),
-          issuerWallet,
           { value: valueWei }
         );
       } catch (err: any) {
@@ -368,7 +429,6 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
       const tx = await contract.createTask(
         selectedDocCid,
         BigInt(requiredValidators),
-        issuerWallet,
         { value: valueWei }
       );
       const rc = await tx.wait();
@@ -408,7 +468,6 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
           doc_cid: selectedDocCid,
           required_validators: requiredValidators,
           reward_wei: Number(rewardWeiNum?.toString?.() || 0),
-          issuer_wallet: issuerWallet,
           tx_hash: tx.hash,
           claim_id: selectedClaimId,
           task_status: "pending",
@@ -495,24 +554,40 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
               </Select>
               <Dialog open={openDeploy} onOpenChange={setOpenDeploy}>
                 <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">{contractAddress ? "View Contract" : "Setup Contract"}</Button>
+                  <Button variant="outline" size="sm">{contractAddress ? "Show Validation Contract" : "Setup Validation Contract"}</Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[600px]">
                   <DialogHeader>
-                    <DialogTitle>Contract Setup</DialogTitle>
+                    <DialogTitle>Validation Contract — One-time Setup</DialogTitle>
                     <DialogDescription>
-                      Use an existing contract address or deploy a new one (only once per wallet). Your wallet: {userWallet || "unknown"}
+                      Wallet: <span className="font-mono">{userWallet || "unknown"}</span>
                     </DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-3 py-2">
-                    <div className="grid gap-1">
-                      <Label>Existing Contract Address (optional)</Label>
-                      <Input value={existingAddress} onChange={(e) => setExistingAddress(e.target.value)} placeholder="0x..." />
-                    </div>
-                    <div className="text-xs text-muted-foreground">ABI/Bytecode are read from <code>lib/contracts/documentValidationBounty.ts</code>.</div>
+                    {!contractAddress && (
+                      <div className="text-sm text-muted-foreground space-y-2">
+                        <p>
+                          This Validation contract escrows your bounty and pays validators when the task is finalized.
+                          A 10% platform fee is deducted internally from the bounty at finalize.
+                        </p>
+                      </div>
+                    )}
+                    {contractAddress && (
+                      <div className="text-xs text-muted-foreground break-all">Current Validation Contract: <span className="font-mono">{contractAddress}</span></div>
+                    )}
+                    {!contractAddress && (
+                      <label className="flex items-center gap-2 text-sm">
+                        <input type="checkbox" checked={consentChecked} onChange={(e) => setConsentChecked(e.target.checked)} />
+                        <span>I understand and agree to deploy this Validation contract for one-time setup.</span>
+                      </label>
+                    )}
                   </div>
                   <DialogFooter>
-                    <Button onClick={handleDeployOrSet} disabled={loadingWeb3}>{loadingWeb3 ? "Please wait..." : "Use / Deploy"}</Button>
+                    {!contractAddress ? (
+                      <Button onClick={handleDeployOrSet} disabled={loadingWeb3 || !consentChecked}>{loadingWeb3 ? "Deploying..." : "Deploy Contract"}</Button>
+                    ) : (
+                      <Button type="button" onClick={() => setOpenDeploy(false)}>Close</Button>
+                    )}
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
@@ -630,7 +705,7 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
           <DialogHeader>
             <DialogTitle>Create Validation Task</DialogTitle>
             <DialogDescription>
-              Platform fee: 10% of reward pool. Issuer fee: 0.01 POL added on top. Total to send = reward + 0.01 POL.
+              Platform fee: 10% of the reward pool is taken by the contract at finalize. Total to send now = reward amount.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-3 py-2">
@@ -645,11 +720,7 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
             <div className="grid gap-1">
               <Label>Reward (POL) — platform takes 10% on finalize</Label>
               <Input type="number" min={0} step="0.0001" value={rewardPol} onChange={(e) => setRewardPol(e.target.value)} />
-              <div className="text-xs text-muted-foreground">Issuer fee fixed at 0.01 POL. Total to send now: {totalSendPol.toFixed(4)} POL</div>
-            </div>
-            <div className="grid gap-1">
-              <Label>Issuer Wallet Address</Label>
-              <Input value={issuerWallet} onChange={(e) => setIssuerWallet(e.target.value)} placeholder="0x..." />
+              <div className="text-xs text-muted-foreground">Total to send now: {totalSendPol.toFixed(4)} POL</div>
             </div>
             <div className="text-xs text-muted-foreground">Contract ABI loaded from <code>lib/contracts/documentValidationBounty.ts</code>.</div>
           </div>
