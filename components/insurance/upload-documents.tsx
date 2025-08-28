@@ -425,8 +425,9 @@ export default function UploadDocuments({ insuranceId }: UploadDocumentsProps) {
           refs.push(ethers.encodeBytes32String(`claim:${id}`));
         }
         const totalValue = price * BigInt(unpaidClaims.length);
-        // Avoid estimateGas to bypass -32603 issues
-        const tx = await contract.payMany(issuers, refs, { value: totalValue } as any);
+        // Provide an explicit gasLimit to bypass MetaMask/provider estimation (-32603)
+        // This should be safely high for small batches; wallet will handle fees.
+        const tx = await contract.payMany(issuers, refs, { value: totalValue, gasLimit: 800000 } as any);
         const receipt = await tx.wait();
         const txHash: string = tx.hash || receipt?.hash;
 
