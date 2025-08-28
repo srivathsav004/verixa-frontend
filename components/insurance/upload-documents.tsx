@@ -367,10 +367,116 @@ export default function UploadDocuments({ insuranceId }: UploadDocumentsProps) {
       toast({ title: "Already scored", description: "Selected claims already have AI scores.", variant: "default", className: "bg-muted text-foreground" });
       return;
     }
+
+    // 1) Enforce payment to issuers via AI contract (batch)
+    try {
+      // Build issuer wallets, userIds and pre-check payment existence
+      const issuerUsers: Record<number, { user_id: number; wallet: string }> = {};
+      const toCheck: Array<{ claimId: number; issuerUserId: number }> = [];
+      for (const id of toGenerate) {
+        const claim = items.find((i) => i.claim_id === id);
+        const issuerId = claim?.issued_by;
+        if (!issuerId) throw new Error(`Claim ${id} missing issuer (issued_by)`);
+        const r = await fetch(`${api}/issuer/${issuerId}/wallet`);
+        if (!r.ok) throw new Error(`Issuer wallet lookup failed for ${issuerId}`);
+        const jw = await r.json();
+        const wallet = (jw.wallet_address || "").trim();
+        if (!wallet) throw new Error(`Issuer ${issuerId} has no wallet`);
+        issuerUsers[issuerId] = { user_id: jw.user_id, wallet };
+        toCheck.push({ claimId: id, issuerUserId: jw.user_id });
+      }
+
+      // Check existing payments for these claimIds
+      const existenceReq = {
+        queries: toCheck.map((e) => ({ sender_user_id: userId!, receiver_user_id: e.issuerUserId, claim_id: e.claimId, payment_type: "ai_score" })),
+      };
+      const exRes = await fetch(`${api}/payments/existence`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(existenceReq) });
+      if (!exRes.ok) throw new Error("payment existence check failed");
+      const exJson = await exRes.json();
+      const unpaidClaims: number[] = [];
+      for (const row of exJson.items as Array<{ claim_id: number; exists: boolean; receiver_user_id: number }>) {
+        if (!row.exists) unpaidClaims.push(row.claim_id);
+      }
+
+      // If some claims are unpaid, pay only those
+      if (unpaidClaims.length > 0) {
+        const { ethers } = await import("ethers");
+        // @ts-ignore
+        const provider = new ethers.BrowserProvider((window as any).ethereum);
+        try { await provider.send("eth_requestAccounts", []); } catch { throw new Error("Wallet access rejected"); }
+        const targetChains = new Set([0x13882, 0x89]);
+        let network = await provider.getNetwork();
+        if (!targetChains.has(Number(network.chainId))) {
+          try {
+            await (window as any).ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0x13882" }] });
+            network = await provider.getNetwork();
+          } catch {}
+        }
+        const signer = await provider.getSigner();
+        const fromAddr = await signer.getAddress();
+        const contract = new ethers.Contract(aiContractAddress, AI_PAYMENT_ABI as any, signer);
+        const price: bigint = await contract.PRICE();
+        const issuers: string[] = [];
+        const refs: string[] = [];
+        for (const id of unpaidClaims) {
+          const claim = items.find((i) => i.claim_id === id)!;
+          const issuerId = claim.issued_by as number;
+          issuers.push(issuerUsers[issuerId].wallet);
+          refs.push(ethers.encodeBytes32String(`claim:${id}`));
+        }
+        const totalValue = price * BigInt(unpaidClaims.length);
+        // Avoid estimateGas to bypass -32603 issues
+        const tx = await contract.payMany(issuers, refs, { value: totalValue } as any);
+        const receipt = await tx.wait();
+        const txHash: string = tx.hash || receipt?.hash;
+
+        // Record payments with claim_id
+        const amountPolEach = Number(ethers.formatEther(price));
+        const payments = unpaidClaims.map((id, idx) => {
+          const claim = items.find((i) => i.claim_id === id)!;
+          const issuerId = claim.issued_by as number;
+          const rec = issuerUsers[issuerId];
+          return {
+            sender_user_id: userId,
+            receiver_user_id: rec.user_id,
+            sender_wallet: fromAddr,
+            receiver_wallet: rec.wallet,
+            amount_pol: amountPolEach,
+            tx_hash: txHash,
+            payment_type: "ai_score",
+            claim_id: id,
+            task_id: null,
+          };
+        });
+        const pr = await fetch(`${api}/payments`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ payments }) });
+        if (!pr.ok) throw new Error("payment record failed");
+      }
+
+      // Re-check to ensure all toGenerate are now paid
+      const finalCheckReq = {
+        queries: toGenerate.map((id) => {
+          const claim = items.find((i) => i.claim_id === id)!;
+          const issuerId = claim.issued_by as number;
+          return { sender_user_id: userId!, receiver_user_id: issuerUsers[issuerId].user_id, claim_id: id, payment_type: "ai_score" };
+        }),
+      };
+      const fc = await fetch(`${api}/payments/existence`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(finalCheckReq) });
+      if (!fc.ok) throw new Error("final payment check failed");
+      const fcj = await fc.json();
+      const unpaidLeft = (fcj.items as any[]).filter((r) => !r.exists).map((r) => r.claim_id);
+      if (unpaidLeft.length > 0) {
+        throw new Error(`Payment missing for claims: ${unpaidLeft.join(", ")}`);
+      }
+    } catch (e: any) {
+      console.error("payment step failed", e);
+      toast({ title: "Payment required", description: e?.message || "On-chain payment failed.", variant: "destructive" });
+      return;
+    }
+
+    // 3) Proceed to generate scores and persist
     const next: Record<number, number> = { ...aiScores };
     toGenerate.forEach((id) => (next[id] = Math.floor(Math.random() * 101)));
     setAiScores(next);
-    // auto-persist to backend
     try {
       const evaluations = toGenerate.map((id) => {
         const claim = items.find((i) => i.claim_id === id);
