@@ -43,7 +43,7 @@ type QueueItem = {
   task_row_id: number;
   task_id: number;
   contract_address: string;
-  task_status: string | null;
+  status: string | null;
   created_at: string;
 };
 
@@ -94,6 +94,12 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
   const [requiredValidators, setRequiredValidators] = useState<number>(1);
   const [rewardPol, setRewardPol] = useState<string>("0");
   // issuer wallet removed
+  // Batch selection state for multi-create
+  const [batchDocs, setBatchDocs] = useState<Array<{ claim_id: number; docCid: string }>>([]);
+  const [batchProgress, setBatchProgress] = useState<{ done: number; total: number }>({ done: 0, total: 0 });
+  const [estimatingGas, setEstimatingGas] = useState(false);
+  const [estGasPerTaskWei, setEstGasPerTaskWei] = useState<bigint | null>(null);
+  const [estGasPriceWei, setEstGasPriceWei] = useState<bigint | null>(null);
 
   // View mode: 'unassigned' (no task yet) or 'queue' (has task)
   const [viewMode, setViewMode] = useState<'unassigned' | 'queue'>('unassigned');
@@ -375,123 +381,147 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
     }
   };
 
-  const handleOpenCreateTask = () => {
+  const handleOpenCreateTask = async () => {
     const ids = Object.keys(selected).filter((k) => selected[Number(k)]).map(Number);
-    if (ids.length !== 1) return toast({ title: "Select one document", description: "Select exactly one row to create a task.", variant: "destructive" });
-    const id = ids[0];
-    const row = unassignedItems.find((i) => i.claim_id === id);
-    if (!row) return toast({ title: "Invalid selection", description: "Row not found", variant: "destructive" });
+    if (ids.length === 0) return toast({ title: "No selection", description: "Select one or more rows to create tasks.", variant: "destructive" });
     if (!contractAddress) return toast({ title: "No contract", description: "Deploy or set a contract first.", variant: "destructive" });
-    // Use report_url as docCid for now (or you can transform to IPFS CID upstream)
-    setSelectedDocCid(row?.report_url || "");
-    setSelectedClaimId(row?.claim_id || null);
+    const rows = unassignedItems.filter((i) => ids.includes(i.claim_id));
+    if (rows.length === 0) return toast({ title: "Invalid selection", description: "Rows not found", variant: "destructive" });
+    setBatchDocs(rows.map(r => ({ claim_id: r.claim_id, docCid: r.report_url })));
+    if (rows.length === 1) {
+      setSelectedDocCid(rows[0].report_url || "");
+      setSelectedClaimId(rows[0].claim_id || null);
+    } else {
+      setSelectedDocCid("");
+      setSelectedClaimId(null);
+    }
     setOpenTask(true);
+    // Try estimate gas once for user info
+    try {
+      setEstimatingGas(true);
+      const sampleDoc = (rows[0]?.report_url || "");
+      if (!sampleDoc) return;
+      const { ethers } = await import("ethers");
+      // @ts-ignore
+      const provider = new ethers.BrowserProvider((window as any).ethereum);
+      const signer = await provider.getSigner();
+      const contract = new ethers.Contract(contractAddress!, CONTRACT_ABI, signer);
+      // value based on current rewardPol input (default 0)
+      const valueWei = (() => { try { return ethers.parseEther((rewardPol || "0").toString()); } catch { return 0n; } })();
+      const est = await contract.createTask.estimateGas(sampleDoc, BigInt(Math.max(1, requiredValidators || 1)), { value: valueWei });
+      const feeData = await provider.getFeeData();
+      const gp = (feeData.maxFeePerGas || feeData.gasPrice || 0n);
+      setEstGasPerTaskWei(est);
+      setEstGasPriceWei(gp);
+    } catch {
+      setEstGasPerTaskWei(null);
+      setEstGasPriceWei(null);
+    } finally {
+      setEstimatingGas(false);
+    }
   };
 
   const handleCreateTask = async () => {
     if (!userId) return toast({ title: "Not logged in", description: "Missing user id", variant: "destructive" });
     if (!contractAddress) return toast({ title: "No contract", description: "Deploy or set a contract first.", variant: "destructive" });
-    if (!selectedDocCid || requiredValidators <= 0) return toast({ title: "Missing fields", description: "Provide validators and doc CID.", variant: "destructive" });
+    const count = batchDocs.length > 0 ? batchDocs.length : (selectedDocCid ? 1 : 0);
+    if (count === 0 || requiredValidators <= 0) return toast({ title: "Missing fields", description: "Provide validators and select at least one document.", variant: "destructive" });
     setLoadingWeb3(true);
+    setBatchProgress({ done: 0, total: count });
     try {
       const { ethers } = await import("ethers");
       // @ts-ignore
       const provider = new ethers.BrowserProvider((window as any).ethereum);
       const signer = await provider.getSigner();
-
-      // Use centralized ABI
       if (!Array.isArray(CONTRACT_ABI) || CONTRACT_ABI.length === 0) {
         toast({ title: "ABI missing", description: "Set ABI in documentValidationBounty.ts", variant: "destructive" });
         return;
       }
       const contract = new ethers.Contract(contractAddress, CONTRACT_ABI, signer);
-      let valueWei: bigint;
-      try {
-        valueWei = ethers.parseEther(totalSendPol.toString());
-      } catch {
-        throw new Error("Invalid reward amount");
-      }
+      const docsToCreate: Array<{ claim_id: number | null; docCid: string }> = batchDocs.length > 0
+        ? batchDocs.map(d => ({ claim_id: d.claim_id, docCid: d.docCid }))
+        : [{ claim_id: selectedClaimId, docCid: selectedDocCid }];
+      const rewardWeiPerTask = (() => { try { return ethers.parseEther((rewardPol || "0").toString()); } catch { throw new Error("Invalid reward amount"); } })();
 
-      // Preflight: try static call and gas estimate to surface revert reasons early
-      try {
-        // staticCall in ethers v6
-        await contract.createTask.staticCall(
-          selectedDocCid,
-          BigInt(requiredValidators),
-          { value: valueWei }
-        );
-        await contract.createTask.estimateGas(
-          selectedDocCid,
-          BigInt(requiredValidators),
-          { value: valueWei }
-        );
-      } catch (err: any) {
-        const msg = err?.shortMessage || err?.reason || err?.message || "Transaction would fail (revert)";
-        throw new Error(`Preflight failed: ${msg}`);
-      }
+      const successes: Array<{ taskId: number; claim_id: number | null; docCid: string; txHash: string; rewardWei: bigint }> = [];
+      const failures: Array<{ claim_id: number | null; docCid: string; error: string }> = [];
 
-      // Send tx
-      const tx = await contract.createTask(
-        selectedDocCid,
-        BigInt(requiredValidators),
-        { value: valueWei }
-      );
-      const rc = await tx.wait();
-
-      // Parse TaskCreated event to get taskId and rewardWei
-      // Fallback: try reading nextTaskId-1
-      let onchainTaskId: number | null = null;
-      let rewardWeiNum: number | null = null;
-      try {
-        for (const lg of rc.logs || []) {
+      for (let i = 0; i < docsToCreate.length; i++) {
+        const entry = docsToCreate[i];
+        try {
+          // Preflight
+          await contract.createTask.staticCall(entry.docCid, BigInt(requiredValidators), { value: rewardWeiPerTask });
+          await contract.createTask.estimateGas(entry.docCid, BigInt(requiredValidators), { value: rewardWeiPerTask });
+          // Send
+          const tx = await contract.createTask(entry.docCid, BigInt(requiredValidators), { value: rewardWeiPerTask });
+          const rc = await tx.wait();
+          let onchainTaskId: number | null = null;
           try {
-            const parsed = contract.interface.parseLog({ topics: lg.topics, data: lg.data });
-            if (parsed?.name === "TaskCreated") {
-              onchainTaskId = Number(parsed.args?.taskId);
-              rewardWeiNum = Number(parsed.args?.rewardWei);
-              break;
+            for (const lg of rc.logs || []) {
+              try {
+                const parsed = contract.interface.parseLog({ topics: lg.topics, data: lg.data });
+                if (parsed?.name === "TaskCreated") {
+                  onchainTaskId = Number(parsed.args?.taskId);
+                  break;
+                }
+              } catch {}
             }
           } catch {}
+          if (onchainTaskId == null) {
+            try { const next = await contract.nextTaskId(); onchainTaskId = Number(next) - 1; } catch {}
+          }
+          const finalTaskId = onchainTaskId ?? -1;
+          successes.push({ taskId: finalTaskId, claim_id: entry.claim_id, docCid: entry.docCid, txHash: tx.hash, rewardWei: rewardWeiPerTask });
+          // Persist each
+          try {
+            const persist = await fetch(`${api}/web3/tasks`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                user_id: userId,
+                contract_address: contractAddress,
+                task_id: finalTaskId,
+                doc_cid: entry.docCid,
+                required_validators: requiredValidators,
+                // send POL as string for NUMERIC(36,18)
+                reward_pol: rewardPol || "0",
+                tx_hash: tx.hash,
+                claim_id: entry.claim_id,
+                status: "pending",
+              })
+            });
+            if (!persist.ok) console.warn("save_task failed for", finalTaskId, entry);
+          } catch (perr) {
+            console.warn("save_task error", perr);
+          }
+        } catch (err: any) {
+          const msg = err?.shortMessage || err?.reason || err?.message || "Error";
+          failures.push({ claim_id: entry.claim_id, docCid: entry.docCid, error: msg });
+        } finally {
+          setBatchProgress((p) => ({ done: p.done + 1, total: p.total }));
         }
-      } catch {}
-      if (onchainTaskId == null) {
-        // Try reading last taskId via nextTaskId - 1
-        try {
-          const next = await contract.nextTaskId();
-          onchainTaskId = Number(next) - 1;
-        } catch {}
       }
 
-      // Persist task
-      const persist = await fetch(`${api}/web3/tasks`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_id: userId,
-          contract_address: contractAddress,
-          task_id: onchainTaskId ?? -1,
-          doc_cid: selectedDocCid,
-          required_validators: requiredValidators,
-          reward_wei: Number(rewardWeiNum?.toString?.() || 0),
-          tx_hash: tx.hash,
-          claim_id: selectedClaimId,
-          task_status: "pending",
-        })
-      });
-      if (!persist.ok) throw new Error("save_task failed");
-
+      // Final toasts
+      if (successes.length) {
+        const ids = successes.map(s => s.taskId).filter((x) => x != null).join(", ");
+        toast({ title: `Created ${successes.length} task(s)`, description: `Task IDs: ${ids}` });
+      }
+      if (failures.length) {
+        toast({ title: `${failures.length} task(s) failed`, description: `Check console for details`, variant: "destructive" });
+      }
       setOpenTask(false);
-      toast({ title: "Task created", description: `Task #${onchainTaskId ?? "?"} created` });
     } catch (e: any) {
       console.error(e);
       let desc = e?.message || "Error";
-      // Surface common MetaMask JSON-RPC error details if available
       const info = (e?.info || {}) as any;
       const errObj = info?.error || e?.error || {};
       if (errObj?.message && !desc.includes(errObj.message)) desc = `${desc} — ${errObj.message}`;
-      toast({ title: "Create task failed", description: desc, variant: "destructive" });
+      toast({ title: "Create tasks failed", description: desc, variant: "destructive" });
     } finally {
       setLoadingWeb3(false);
+      setBatchProgress({ done: 0, total: 0 });
+      setBatchDocs([]);
     }
   };
 
@@ -525,6 +555,51 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
   };
 
   const handleToggle = (id: number, checked: boolean) => setSelected((s) => ({ ...s, [id]: checked }));
+
+  // Inline fee and gas summary component for the Create Task modal
+  const FeeSummary = () => {
+    const gasUnits = estGasPerTaskWei;
+    const gasPrice = estGasPriceWei;
+    const reward = parseFloat(rewardPol || "0");
+
+    const fmtPol = (wei: bigint) => {
+      const s = wei.toString();
+      const pad = s.padStart(19, '0');
+      const intPart = pad.slice(0, pad.length - 18).replace(/^0+/, '') || '0';
+      const fracPart = pad.slice(-18).replace(/0+$/, '');
+      return fracPart ? `${intPart}.${fracPart}` : intPart;
+    };
+
+    let feePolStr = "-";
+    let gasPriceGweiStr = "-";
+    if (gasUnits != null && gasPrice != null) {
+      try {
+        const totalWei = gasUnits * gasPrice; // BigInt * BigInt
+        feePolStr = `${fmtPol(totalWei)} POL`;
+        gasPriceGweiStr = `${(Number(gasPrice) / 1e9).toFixed(2)} gwei`;
+      } catch {}
+    }
+
+    const platformFee = ((reward || 0) * platformFeeBps) / 10000;
+    const validatorsShare = Math.max(0, (reward || 0) - platformFee);
+
+    return (
+      <div className="text-xs text-muted-foreground space-y-1">
+        {estimatingGas ? (
+          <div>Estimating gas...</div>
+        ) : (
+          <>
+            <div>Estimated gas per task: {gasUnits != null ? gasUnits.toString() : '-'}</div>
+            <div>Gas price: {gasPriceGweiStr}</div>
+            <div>Est. network fee per task: {feePolStr}</div>
+          </>
+        )}
+        <div>Reward per task: {Number.isFinite(reward) ? reward : 0} POL</div>
+        <div>Platform fee (10%): {platformFee.toFixed(6)} POL</div>
+        <div>Validators share (~90%): {validatorsShare.toFixed(6)} POL</div>
+      </div>
+    );
+  };
 
   return (
     <div className="max-w-full">
@@ -664,7 +739,7 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
                       <td className="p-2 align-top">{patientNames[r.patient_id] ?? `Patient #${r.patient_id}`}</td>
                       <td className="p-2 align-top"><a href={r.report_url} target="_blank" className="text-primary underline">Open</a></td>
                       <td className="p-2 align-top">{r.task_id}</td>
-                      <td className="p-2 align-top"><Badge variant="outline">{r.task_status ?? '-'}</Badge></td>
+                      <td className="p-2 align-top"><Badge variant="outline">{r.status ?? '-'}</Badge></td>
                       <td className="p-2 align-top"><span className="font-mono text-xs break-all">{r.contract_address}</span></td>
                       <td className="p-2 align-top whitespace-nowrap">{new Date(r.created_at).toLocaleString("en-US")}</td>
                     </tr>
@@ -710,29 +785,46 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
       <Dialog open={openTask} onOpenChange={setOpenTask}>
         <DialogContent className="sm:max-w-[560px]">
           <DialogHeader>
-            <DialogTitle>Create Validation Task</DialogTitle>
+            <DialogTitle>{batchDocs.length > 1 ? `Create ${batchDocs.length} Validation Tasks` : 'Create Validation Task'}</DialogTitle>
             <DialogDescription>
-              Platform fee: 10% of the reward pool is taken by the contract at finalize. Total to send now = reward amount.
+              Platform fee: 10% of each task's reward pool is taken by the contract at finalize and paid to the platform.
+              You fund the full reward now; validators share 90% equally on finalize.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-3 py-2">
-            <div className="grid gap-1">
-              <Label>Document CID / URL</Label>
-              <Input value={selectedDocCid} onChange={(e) => setSelectedDocCid(e.target.value)} placeholder="ipfs://... or https://..." />
-            </div>
+            {batchDocs.length <= 1 ? (
+              <div className="grid gap-1">
+                <Label>Document CID / URL</Label>
+                <Input value={selectedDocCid} onChange={(e) => setSelectedDocCid(e.target.value)} placeholder="ipfs://... or https://..." />
+              </div>
+            ) : (
+              <div className="text-sm text-muted-foreground">
+                <div>Selected documents: {batchDocs.length}</div>
+                <div className="mt-1 max-h-24 overflow-auto text-xs break-all border rounded p-2">
+                  {batchDocs.slice(0, 5).map((d) => (<div key={d.claim_id}>{d.docCid}</div>))}
+                  {batchDocs.length > 5 && <div>...and {batchDocs.length - 5} more</div>}
+                </div>
+              </div>
+            )}
             <div className="grid gap-1">
               <Label>Required Validators</Label>
               <Input type="number" min={1} value={requiredValidators} onChange={(e) => setRequiredValidators(Number(e.target.value))} />
             </div>
             <div className="grid gap-1">
-              <Label>Reward (POL) — platform takes 10% on finalize</Label>
+              <Label>Reward per Task (POL) — platform takes 10% on finalize</Label>
               <Input type="number" min={0} step="0.0001" value={rewardPol} onChange={(e) => setRewardPol(e.target.value)} />
-              <div className="text-xs text-muted-foreground">Total to send now: {totalSendPol.toFixed(4)} POL</div>
+              <FeeSummary />
             </div>
             <div className="text-xs text-muted-foreground">Contract ABI loaded from <code>lib/contracts/documentValidationBounty.ts</code>.</div>
           </div>
           <DialogFooter>
-            <Button onClick={handleCreateTask} disabled={loadingWeb3 || !contractAddress}>{loadingWeb3 ? "Creating..." : "Create Task"}</Button>
+            <Button onClick={handleCreateTask} disabled={loadingWeb3 || !contractAddress}>
+              {loadingWeb3
+                ? (batchDocs.length > 1
+                    ? `Creating ${batchProgress.done}/${batchProgress.total}...`
+                    : "Creating...")
+                : (batchDocs.length > 1 ? `Create ${batchDocs.length} Tasks` : 'Create Task')}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
