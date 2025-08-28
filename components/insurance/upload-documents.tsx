@@ -76,7 +76,7 @@ export default function UploadDocuments({ insuranceId }: UploadDocumentsProps) {
   const [userWallet, setUserWallet] = useState<string | null>(null);
   const [aiContractAddress, setAiContractAddress] = useState<string | null>(null);
   const [openDeploy, setOpenDeploy] = useState(false);
-  const [existingAddress, setExistingAddress] = useState<string>("");
+  const [consentChecked, setConsentChecked] = useState(false);
   const [loadingWeb3, setLoadingWeb3] = useState(false);
 
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
@@ -106,25 +106,23 @@ export default function UploadDocuments({ insuranceId }: UploadDocumentsProps) {
     if (!userWallet) return toast({ title: "No wallet on profile", description: "Add your wallet to profile first.", variant: "destructive" });
     setLoadingWeb3(true);
     try {
-      // short-circuit if contract already exists and no override provided
+      // short-circuit if contract already exists
       try {
-        if (!existingAddress?.trim()) {
-          const chk = await fetch(`${api}/web3/contracts/by-wallet/${encodeURIComponent(userWallet)}`);
-          if (chk.ok) {
-            const jc = await chk.json();
-            const addr = jc?.contract?.ai_contract || jc?.contract?.contract_address;
-            if (addr) {
-              setAiContractAddress(addr);
-              setOpenDeploy(false);
-              toast({ title: "Contract already exists", description: `Using ${addr}` });
-              return;
-            }
+        const chk = await fetch(`${api}/web3/contracts/by-wallet/${encodeURIComponent(userWallet)}`);
+        if (chk.ok) {
+          const jc = await chk.json();
+          const addr = jc?.contract?.ai_contract;
+          if (addr) {
+            setAiContractAddress(addr);
+            setOpenDeploy(false);
+            toast({ title: "AI Contract", description: `Using ${addr}` });
+            return;
           }
         }
       } catch {}
 
-      let deployedAddress = existingAddress?.trim();
-      if (!deployedAddress) {
+      let deployedAddress = "";
+      {
         if (!Array.isArray(AI_PAYMENT_ABI) || AI_PAYMENT_ABI.length === 0 || typeof AI_PAYMENT_BYTECODE !== "string" || AI_PAYMENT_BYTECODE.length < 10) {
           toast({ title: "Missing artifacts", description: "Set ABI/Bytecode in ai_payment_contract.ts", variant: "destructive" });
           return;
@@ -176,36 +174,40 @@ export default function UploadDocuments({ insuranceId }: UploadDocumentsProps) {
         const balance = await provider.getBalance(fromAddr);
         if (String(balance) === "0") throw new Error("Insufficient POL to pay gas");
         // Deploy with explicit gasLimit only (let wallet fill fees)
-        const contract = await factory.deploy({ gasLimit } as any);
-        await contract.waitForDeployment();
-        deployedAddress = await contract.getAddress();
-      }
-
-      // Persist to insurance-scoped endpoint if available
-      let saved = false;
-      try {
-        if (insuranceId) {
-          const r = await fetch(`${api}/insurance/${insuranceId}/ai-contract`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ user_id: userId, wallet_address: userWallet, ai_contract: deployedAddress })
-          });
-          if (r.ok) saved = true;
+        try {
+          const contract = await factory.deploy({ gasLimit } as any);
+          await contract.waitForDeployment();
+          deployedAddress = await contract.getAddress();
+        } catch (e: any) {
+          // Fallback: construct raw tx with explicit EIP-1559 fees to avoid -32603 from some RPCs
+          const fee = await provider.getFeeData();
+          const maxFeePerGas = fee.maxFeePerGas ? (fee.maxFeePerGas * BigInt(120)) / BigInt(100) : undefined;
+          const maxPriorityFeePerGas = fee.maxPriorityFeePerGas ? (fee.maxPriorityFeePerGas * BigInt(120)) / BigInt(100) : undefined;
+          const bufferedGas = gasLimit ? (gasLimit * BigInt(120)) / BigInt(100) : undefined;
+          const deployTx = await factory.getDeployTransaction();
+          const raw = {
+            data: deployTx.data,
+            gasLimit: bufferedGas ?? gasLimit,
+            ...(maxFeePerGas ? { maxFeePerGas } : {}),
+            ...(maxPriorityFeePerGas ? { maxPriorityFeePerGas } : {}),
+          } as any;
+          const sent = await signer.sendTransaction(raw);
+          const rec = await sent.wait();
+          if (!rec?.contractAddress) throw e;
+          deployedAddress = rec.contractAddress;
         }
-      } catch {}
-      if (!saved) {
-        // Fallback to generic web3 contract save endpoint if present
+
+        // Persist once via unified contracts endpoint (upsert ai_contract)
         const r2 = await fetch(`${api}/web3/contracts`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: userId, wallet_address: userWallet, ai_contract: deployedAddress, contract_address: deployedAddress })
+          body: JSON.stringify({ user_id: userId, wallet_address: userWallet, ai_contract: deployedAddress })
         });
         if (!r2.ok) {
           const j = await r2.json().catch(() => ({} as any));
           throw new Error(j?.detail || "save_ai_contract failed");
         }
       }
-
       setAiContractAddress(deployedAddress);
       setOpenDeploy(false);
       toast({ title: "AI Contract ready", description: `Using ${deployedAddress}` });
@@ -229,34 +231,26 @@ export default function UploadDocuments({ insuranceId }: UploadDocumentsProps) {
     if (!Number.isNaN(uid)) setUserId(uid);
 
     const fetchUserAndContract = async () => {
+      let resolvedWallet: string | null = null;
       try {
         // fetch wallet from users table
         if (!Number.isNaN(uid)) {
           const u = await fetch(`${api}/users/${uid}`);
           if (u.ok) {
             const ju = await u.json();
-            setUserWallet(ju?.wallet_address || null);
+            resolvedWallet = (ju?.wallet_address || "").trim() || null;
+            setUserWallet(resolvedWallet);
           }
         }
       } catch {}
-      // try to resolve existing ai contract from backend (prefer insurance-scoped endpoint if present)
+      // Resolve existing AI contract from unified by-wallet lookup only (use freshly fetched wallet if available)
       try {
-        if (insuranceId) {
-          const r1 = await fetch(`${api}/insurance/${insuranceId}/ai-contract`);
-          if (r1.ok) {
-            const j1 = await r1.json();
-            const addr = j1?.ai_contract || j1?.contract_address || null;
-            if (addr) { setAiContractAddress(addr); return; }
-          }
-        }
-      } catch {}
-      try {
-        // fallback by wallet (if backend exposes generic lookup)
-        if (userWallet) {
-          const r2 = await fetch(`${api}/web3/contracts/by-wallet/${encodeURIComponent(userWallet)}`);
+        const w = resolvedWallet || userWallet;
+        if (w) {
+          const r2 = await fetch(`${api}/web3/contracts/by-wallet/${encodeURIComponent(w)}`);
           if (r2.ok) {
             const j2 = await r2.json();
-            const addr = j2?.contract?.ai_contract || j2?.contract?.contract_address || null;
+            const addr = j2?.contract?.ai_contract || null;
             if (addr) setAiContractAddress(addr);
           }
         }
@@ -660,30 +654,48 @@ const applyBucketAction = async () => {
               </Select>
               <Dialog open={openDeploy} onOpenChange={setOpenDeploy}>
                 <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">{aiContractAddress ? "View AI Contract" : "Setup AI Contract"}</Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[600px]">
-                  <DialogHeader>
-                    <DialogTitle>AI Payment Contract</DialogTitle>
-                    <DialogDescription>
-                      Deploy once and reuse forever. Your wallet: {userWallet || "unknown"}
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="grid gap-3 py-2">
-                    <div className="grid gap-1">
-                      <Label>Existing Contract Address (optional)</Label>
-                      <Input value={existingAddress} onChange={(e) => setExistingAddress(e.target.value)} placeholder="0x..." />
+                <Button variant="outline" size="sm">{aiContractAddress ? "Show AI Contract" : "Setup AI Contract"}</Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[600px]">
+                <DialogHeader>
+                  <DialogTitle>AI Payment Contract — One-time Setup</DialogTitle>
+                  <DialogDescription>
+                    Wallet: <span className="font-mono">{userWallet || "unknown"}</span>
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-3 py-2">
+                  {!aiContractAddress && (
+                    <div className="text-sm text-muted-foreground space-y-2">
+                      <p>
+                        This AI Payment contract processes document issuer payments when you generate AI scores for external reports.
+                        Each payment is 1.00 POL per document: 0.90 POL goes to the issuer, and 0.10 POL goes to the platform as a fee.
+                      </p>
+                      <p>
+                        Deploy this once for your wallet and reuse it for future AI score payments.
+                      </p>
                     </div>
-                    {aiContractAddress && (
-                      <div className="text-xs text-muted-foreground break-all">Current: {aiContractAddress}</div>
-                    )}
-                    <div className="text-xs text-muted-foreground">Artifacts loaded from <code>lib/contracts/ai_payment_contract.ts</code>. This is a one-time setup.</div>
-                  </div>
-                  <DialogFooter>
-                    <Button onClick={handleDeployAIContract} disabled={loadingWeb3}>{loadingWeb3 ? "Please wait..." : "Use / Deploy"}</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+                  )}
+                  {aiContractAddress && (
+                    <div className="text-xs text-muted-foreground break-all">
+                      Current AI Contract: <span className="font-mono">{aiContractAddress}</span>
+                    </div>
+                  )}
+                  {!aiContractAddress && (
+                    <label className="flex items-center gap-2 text-sm">
+                      <input type="checkbox" checked={consentChecked} onChange={(e) => setConsentChecked(e.target.checked)} />
+                      <span>I understand and agree to deploy this AI Payment contract for one-time setup.</span>
+                    </label>
+                  )}
+                </div>
+                <DialogFooter>
+                  {!aiContractAddress ? (
+                    <Button onClick={handleDeployAIContract} disabled={loadingWeb3 || !consentChecked}>{loadingWeb3 ? "Deploying..." : "Deploy Contract"}</Button>
+                  ) : (
+                    <Button type="button" onClick={() => setOpenDeploy(false)}>Close</Button>
+                  )}
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
             </div>
           </div>
 
