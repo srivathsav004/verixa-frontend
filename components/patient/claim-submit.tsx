@@ -45,10 +45,14 @@ export default function ClaimSubmit({ patientId }: { patientId: number }) {
   const [insurersLoading, setInsurersLoading] = useState(false);
   const [docs, setDocs] = useState<IssuedDoc[]>([]);
   const [docsLoading, setDocsLoading] = useState(false);
+  // Issuers (hospitals/labs) list for unverified uploads
+  const [issuers, setIssuers] = useState<Array<{ issuer_id: number; organization_name: string }>>([]);
+  const [issuersLoading, setIssuersLoading] = useState(false);
 
   const [selectedInsuranceId, setSelectedInsuranceId] = useState<number | "">("");
   const [selectedIssuedDocId, setSelectedIssuedDocId] = useState<number | "">("");
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [selectedIssuerId, setSelectedIssuerId] = useState<number | "">("");
   const [submitting, setSubmitting] = useState(false);
   const [insurerQuery, setInsurerQuery] = useState("");
   const [sortByCsrDesc, setSortByCsrDesc] = useState(true);
@@ -76,7 +80,21 @@ export default function ClaimSubmit({ patientId }: { patientId: number }) {
         if (!ignore) setInsurersLoading(false);
       }
     };
+    const loadIssuers = async () => {
+      setIssuersLoading(true);
+      try {
+        const res = await fetch(`${api}/issuer/list`);
+        if (!res.ok) throw new Error(`failed issuers: ${res.status}`);
+        const data = await res.json();
+        if (!ignore) setIssuers(data.items || []);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        if (!ignore) setIssuersLoading(false);
+      }
+    };
     loadInsurers();
+    loadIssuers();
     return () => { ignore = true; };
   }, [api]);
 
@@ -116,8 +134,10 @@ export default function ClaimSubmit({ patientId }: { patientId: number }) {
         if (chosen.issuer_id != null) fd.append("issued_by", String(chosen.issuer_id));
       } else {
         if (!uploadFile) { setSubmitting(false); return; }
+        if (!selectedIssuerId) { alert("Please select the hospital/issuer where you got this report."); setSubmitting(false); return; }
         fd.append("is_verified", "false");
         fd.append("file", uploadFile);
+        fd.append("issued_by", String(selectedIssuerId));
       }
       const res = await fetch(`${api}/claims`, { method: "POST", body: fd });
       if (!res.ok) {
@@ -143,6 +163,7 @@ export default function ClaimSubmit({ patientId }: { patientId: number }) {
       setSelectedInsuranceId("");
       setSelectedIssuedDocId("");
       setUploadFile(null);
+      setSelectedIssuerId("");
       // Optionally emit an event or callback to refresh lists elsewhere
     } catch (e) {
       console.error(e);
@@ -224,6 +245,11 @@ export default function ClaimSubmit({ patientId }: { patientId: number }) {
   const selectedInsurer = useMemo(() => (
     filteredInsurers.find(i => i.insurance_id === Number(selectedInsuranceId))
   ), [filteredInsurers, selectedInsuranceId]);
+
+  const needIssuerSelection = useMemo(() => {
+    // If no issued doc selected (unverified path), require issuer selection when there's an upload
+    return !selectedIssuedDocId && !!uploadFile;
+  }, [selectedIssuedDocId, uploadFile]);
 
   return (
     <Card className="border-border">
@@ -485,6 +511,27 @@ export default function ClaimSubmit({ patientId }: { patientId: number }) {
                     maxSize={10}
                     description="PDF or Image up to 10MB"
                   />
+                  {/* Issuer selection for unverified report */}
+                  <div className="mt-2">
+                    <div className="text-sm mb-1">Select Hospital/Issuer</div>
+                    {issuersLoading ? (
+                      <Skeleton className="h-9 w-64 bg-foreground/10" />
+                    ) : (
+                      <Select value={selectedIssuerId ? String(selectedIssuerId) : ""} onValueChange={(v) => setSelectedIssuerId(Number(v))}>
+                        <SelectTrigger className="w-full sm:w-64">
+                          <SelectValue placeholder="Choose issuer" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {issuers.map((it) => (
+                            <SelectItem key={it.issuer_id} value={String(it.issuer_id)}>
+                              {it.organization_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                    <div className="text-xs text-muted-foreground mt-1">Required when submitting an unverified report.</div>
+                  </div>
                   <div className="text-xs text-muted-foreground mt-1">All issued documents are locked; you can upload a new report to submit as unverified.</div>
                 </div>
               )}
@@ -500,6 +547,28 @@ export default function ClaimSubmit({ patientId }: { patientId: number }) {
                     maxSize={10}
                     description="PDF or Image up to 10MB"
                   />
+                  {needIssuerSelection && (
+                    <div className="mt-2">
+                      <div className="text-sm mb-1">Select Hospital/Issuer</div>
+                      {issuersLoading ? (
+                        <Skeleton className="h-9 w-64 bg-foreground/10" />
+                      ) : (
+                        <Select value={selectedIssuerId ? String(selectedIssuerId) : ""} onValueChange={(v) => setSelectedIssuerId(Number(v))}>
+                          <SelectTrigger className="w-full sm:w-64">
+                            <SelectValue placeholder="Choose issuer" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {issuers.map((it) => (
+                              <SelectItem key={it.issuer_id} value={String(it.issuer_id)}>
+                                {it.organization_name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                      <div className="text-xs text-muted-foreground mt-1">Required when submitting an unverified report.</div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -514,6 +583,27 @@ export default function ClaimSubmit({ patientId }: { patientId: number }) {
                 maxSize={10}
                 description="PDF or Image up to 10MB"
               />
+              {/* Issuer selection for unverified report when no issued docs exist */}
+              <div className="mt-2">
+                <div className="text-sm mb-1">Select Hospital/Issuer</div>
+                {issuersLoading ? (
+                  <Skeleton className="h-9 w-64 bg-foreground/10" />
+                ) : (
+                  <Select value={selectedIssuerId ? String(selectedIssuerId) : ""} onValueChange={(v) => setSelectedIssuerId(Number(v))}>
+                    <SelectTrigger className="w-full sm:w-64">
+                      <SelectValue placeholder="Choose issuer" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {issuers.map((it) => (
+                        <SelectItem key={it.issuer_id} value={String(it.issuer_id)}>
+                          {it.organization_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                <div className="text-xs text-muted-foreground mt-1">Required when submitting an unverified report.</div>
+              </div>
             </div>
           )}
 
@@ -524,7 +614,9 @@ export default function ClaimSubmit({ patientId }: { patientId: number }) {
               disabled={
                 submitting ||
                 !selectedInsuranceId ||
-                (!selectedIssuedDocId && !uploadFile)
+                (!selectedIssuedDocId && !uploadFile) ||
+                // If unverified flow, ensure issuer is selected
+                ((!selectedIssuedDocId && !!uploadFile) && !selectedIssuerId)
               }
             >
               {submitting ? "Submitting..." : "Submit Claim"}
