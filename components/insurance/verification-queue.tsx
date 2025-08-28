@@ -25,8 +25,10 @@ type QueueItem = {
   is_verified: boolean;
   task_row_id: number;
   task_id: number;
-  contract_address: string;
-  task_status: string | null;
+  status: string | null;
+  required_validators?: number | null;
+  tx_hash?: string | null;
+  reward_pol?: string | null;
   created_at: string;
 };
 
@@ -61,11 +63,10 @@ export default function VerificationQueue({ insuranceId }: VerificationQueueProp
       const resp = await fetch(`${api}/verification-queue?${qs.toString()}`);
       if (!resp.ok) throw new Error(`fetch queue failed ${resp.status}`);
       const j = await resp.json();
-      // Frontend filter to show only pending tasks and unverified claims
-      const filtered: QueueItem[] = (j.items || []).filter((r: QueueItem) => (r.task_status || "").toLowerCase() === "pending" && !r.is_verified);
-      setItems(filtered);
-      setTotal(j.total || filtered.length || 0);
-      prefetchPatientNames(filtered);
+      const rows: QueueItem[] = j.items || [];
+      setItems(rows);
+      setTotal(j.total ?? rows.length ?? 0);
+      prefetchPatientNames(rows);
     } catch (e: any) {
       console.error(e);
       toast({ title: "Load failed", description: e?.message || "Error", variant: "destructive" });
@@ -112,6 +113,25 @@ export default function VerificationQueue({ insuranceId }: VerificationQueueProp
     return pages;
   })();
 
+  const shortHash = (h?: string | null) => {
+    if (!h) return "-";
+    const s = h.startsWith("0x") ? h.slice(2) : h;
+    return (h.startsWith("0x") ? "0x" : "") + s.slice(0, 6) + "…";
+  };
+
+  const txExplorerUrl = (h?: string | null) => {
+    if (!h) return undefined;
+    // Polygon Amoy testnet
+    return `https://amoy.polygonscan.com/tx/${h}`;
+  };
+
+  const formatReward = (v?: string | null) => {
+    if (!v) return "-";
+    const num = Number(v);
+    if (Number.isNaN(num)) return v;
+    return num.toFixed(3);
+  };
+
   return (
     <div className="max-w-full">
       <Card className="border-border">
@@ -139,17 +159,19 @@ export default function VerificationQueue({ insuranceId }: VerificationQueueProp
                   <th className="p-2 text-left">Patient</th>
                   <th className="p-2 text-left">Report URL</th>
                   <th className="p-2 text-left">Task ID</th>
-                  <th className="p-2 text-left">Task Status</th>
-                  <th className="p-2 text-left">Contract</th>
+                  <th className="p-2 text-left">Status</th>
+                  <th className="p-2 text-left">Required Validators</th>
+                  <th className="p-2 text-left">Tx Hash</th>
+                  <th className="p-2 text-left">Reward (POL)</th>
                   <th className="p-2 text-left">Created</th>
                 </tr>
               </thead>
               <tbody>
                 {loading && (
-                  <tr><td colSpan={7} className="p-3">Loading...</td></tr>
+                  <tr><td colSpan={9} className="p-3">Loading...</td></tr>
                 )}
                 {!loading && items.length === 0 && (
-                  <tr><td colSpan={7} className="p-3 text-muted-foreground">No records</td></tr>
+                  <tr><td colSpan={9} className="p-3 text-muted-foreground">No records</td></tr>
                 )}
                 {!loading && items.map((r, idx) => (
                   <tr key={`${r.claim_id}-${r.task_id}`} className={`${idx % 2 ? "bg-foreground/5/20" : ""} hover:bg-foreground/5`}>
@@ -157,8 +179,18 @@ export default function VerificationQueue({ insuranceId }: VerificationQueueProp
                     <td className="p-2 align-top">{patientNames[r.patient_id] ?? `Patient #${r.patient_id}`}</td>
                     <td className="p-2 align-top"><a href={r.report_url} target="_blank" className="text-primary underline">Open</a></td>
                     <td className="p-2 align-top">{r.task_id}</td>
-                    <td className="p-2 align-top"><Badge variant="outline">{r.task_status ?? '-'}</Badge></td>
-                    <td className="p-2 align-top"><span className="font-mono text-xs break-all">{r.contract_address}</span></td>
+                    <td className="p-2 align-top"><Badge variant="outline">{r.status ?? '-'}</Badge></td>
+                    <td className="p-2 align-top">{r.required_validators ?? '-'}</td>
+                    <td className="p-2 align-top">
+                      {r.tx_hash ? (
+                        <a href={txExplorerUrl(r.tx_hash)} target="_blank" className="text-primary underline font-mono text-xs">
+                          {shortHash(r.tx_hash)}
+                        </a>
+                      ) : (
+                        '-'
+                      )}
+                    </td>
+                    <td className="p-2 align-top">{formatReward(r.reward_pol)}</td>
                     <td className="p-2 align-top whitespace-nowrap">{new Date(r.created_at).toLocaleString("en-US")}</td>
                   </tr>
                 ))}
