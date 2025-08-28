@@ -37,7 +37,8 @@ export default function ClaimHistory({ patientId }: { patientId: number }) {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [insurerMap, setInsurerMap] = useState<Record<number, string>>({});
-  const [verifiedFilter, setVerifiedFilter] = useState<"all" | "verified" | "unverified">("all");
+  // Filter by claim status instead of verification flag
+  const [statusFilter, setStatusFilter] = useState<"all" | "approved" | "rejected">("all");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -100,25 +101,27 @@ export default function ClaimHistory({ patientId }: { patientId: number }) {
     try { return new Date(iso).toLocaleString(); } catch { return iso; }
   };
 
-  // Approved only for history view
-  const approved = useMemo(() => claims.filter(c => c.status?.toLowerCase() === "approved"), [claims]);
+  // Show approved and rejected in history view
+  const approvedOrRejected = useMemo(
+    () => claims.filter(c => ["approved", "rejected"].includes((c.status || "").toLowerCase())),
+    [claims]
+  );
 
   // Filters and search (by insurer name)
   const filtered = useMemo(() => {
-    let arr = approved.slice();
-    if (verifiedFilter !== "all") {
-      const flag = verifiedFilter === "verified";
-      arr = arr.filter((d) => d.is_verified === flag);
+    let arr = approvedOrRejected.slice();
+    if (statusFilter !== "all") {
+      arr = arr.filter((d) => (d.status || "").toLowerCase() === statusFilter);
     }
     if (search.trim()) {
       const q = search.toLowerCase();
       arr = arr.filter((d) => (insurerMap[d.insurance_id]?.toLowerCase() || "#" + d.insurance_id).includes(q));
     }
     return arr;
-  }, [approved, verifiedFilter, search, insurerMap]);
+  }, [approvedOrRejected, statusFilter, search, insurerMap]);
 
   // Reset page on filter or search change
-  useEffect(() => { setPage(1); }, [verifiedFilter, search]);
+  useEffect(() => { setPage(1); }, [statusFilter, search]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, totalPages);
@@ -149,18 +152,18 @@ export default function ClaimHistory({ patientId }: { patientId: number }) {
     <Card className="border-border">
       <CardHeader>
         <CardTitle>Claims History</CardTitle>
-        <CardDescription>Approved claims</CardDescription>
+        <CardDescription>Approved and Rejected claims</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-3">
           <div className="text-sm text-muted-foreground">Patient ID: {patientId}</div>
           <div className="flex flex-wrap gap-2 items-center">
-            <Select value={verifiedFilter} onValueChange={(v) => setVerifiedFilter(v as any)}>
-              <SelectTrigger className="w-[160px]"><SelectValue placeholder="Verified filter" /></SelectTrigger>
+            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+              <SelectTrigger className="w-[160px]"><SelectValue placeholder="Status filter" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All</SelectItem>
-                <SelectItem value="verified">Verified only</SelectItem>
-                <SelectItem value="unverified">Unverified only</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
               </SelectContent>
             </Select>
             <Input placeholder="Search insurer" className="w-[200px]" value={search} onChange={(e) => setSearch(e.target.value)} />
@@ -184,8 +187,8 @@ export default function ClaimHistory({ patientId }: { patientId: number }) {
             <Skeleton className="h-10 w-11/12 bg-foreground/10" />
             <Skeleton className="h-10 w-10/12 bg-foreground/10" />
           </div>
-        ) : approved.length === 0 ? (
-          <div className="text-sm text-muted-foreground">No approved claims yet.</div>
+        ) : approvedOrRejected.length === 0 ? (
+          <div className="text-sm text-muted-foreground">No approved or rejected claims yet.</div>
         ) : (
           <div className="w-full overflow-x-auto">
             <Table>
@@ -193,7 +196,6 @@ export default function ClaimHistory({ patientId }: { patientId: number }) {
                 <TableRow>
                   <TableHead className="w-[90px]">Claim #</TableHead>
                   <TableHead>Insurance</TableHead>
-                  <TableHead>Verified</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Created</TableHead>
                   <TableHead>Report</TableHead>
@@ -205,10 +207,12 @@ export default function ClaimHistory({ patientId }: { patientId: number }) {
                     <TableCell className="font-medium">{(currentPage - 1) * pageSize + idx + 1}</TableCell>
                     <TableCell>{insurerMap[c.insurance_id] || `#${c.insurance_id}`}</TableCell>
                     <TableCell>
-                      <Badge variant={c.is_verified ? "secondary" : "outline"}>{c.is_verified ? "Verified" : "Unverified"}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">Approved</Badge>
+                      {(() => {
+                        const s = (c.status || "").toLowerCase();
+                        if (s === "approved") return <Badge variant="secondary">Approved</Badge>;
+                        if (s === "rejected") return <Badge variant="destructive">Rejected</Badge>;
+                        return <Badge variant="outline">{c.status}</Badge>;
+                      })()}
                     </TableCell>
                     <TableCell className="whitespace-nowrap">{prettyDate(c.created_at)}</TableCell>
                     <TableCell className="max-w-[280px] truncate">

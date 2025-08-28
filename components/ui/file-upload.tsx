@@ -14,6 +14,7 @@ interface FileUploadProps {
   className?: string
   maxSize?: number // in MB
   description?: string
+  disabled?: boolean
 }
 
 export function FileUpload({
@@ -26,7 +27,8 @@ export function FileUpload({
   onChange,
   className,
   maxSize = 5,
-  description = "PDF, JPG, PNG up to 5MB"
+  description = "PDF, JPG, PNG up to 5MB",
+  disabled = false,
 }: FileUploadProps) {
   const [dragActive, setDragActive] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -38,6 +40,7 @@ export function FileUpload({
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    if (disabled) return
     if (e.type === "dragenter" || e.type === "dragover") {
       setDragActive(true)
     } else if (e.type === "dragleave") {
@@ -49,6 +52,7 @@ export function FileUpload({
     e.preventDefault()
     e.stopPropagation()
     setDragActive(false)
+    if (disabled) return
 
     const droppedFiles = Array.from(e.dataTransfer.files)
     handleFiles(droppedFiles)
@@ -56,6 +60,7 @@ export function FileUpload({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault()
+    if (disabled) return
     const selectedFiles = e.target.files ? Array.from(e.target.files) : []
     handleFiles(selectedFiles)
   }
@@ -87,6 +92,7 @@ export function FileUpload({
   }
 
   const openFileDialog = () => {
+    if (disabled) return
     inputRef.current?.click()
   }
 
@@ -118,7 +124,8 @@ export function FileUpload({
           dragActive
             ? "border-blue-400 bg-blue-400/10"
             : "border-gray-600 bg-gray-800/30 hover:bg-gray-800/50",
-          files.length > 0 ? "h-auto min-h-[6rem]" : "h-24"
+          files.length > 0 ? "h-auto min-h-[6rem]" : "h-24",
+          disabled && "opacity-50 pointer-events-none cursor-not-allowed"
         )}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
@@ -134,6 +141,7 @@ export function FileUpload({
           accept={accept}
           multiple={multiple}
           onChange={handleChange}
+          disabled={disabled}
         />
         
         {files.length === 0 ? (

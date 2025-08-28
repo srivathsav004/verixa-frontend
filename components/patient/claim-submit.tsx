@@ -56,6 +56,8 @@ export default function ClaimSubmit({ patientId }: { patientId: number }) {
   const [submitting, setSubmitting] = useState(false);
   const [insurerQuery, setInsurerQuery] = useState("");
   const [sortByCsrDesc, setSortByCsrDesc] = useState(true);
+  // Force-remount upload inputs after a successful submit to allow selecting the same file again
+  const [uploadKey, setUploadKey] = useState(0);
   // Insurer pagination
   const [insPage, setInsPage] = useState(1);
   const [insPageSize, setInsPageSize] = useState(6);
@@ -164,6 +166,7 @@ export default function ClaimSubmit({ patientId }: { patientId: number }) {
       setSelectedIssuedDocId("");
       setUploadFile(null);
       setSelectedIssuerId("");
+      setUploadKey((k) => k + 1);
       // Optionally emit an event or callback to refresh lists elsewhere
     } catch (e) {
       console.error(e);
@@ -464,7 +467,13 @@ export default function ClaimSubmit({ patientId }: { patientId: number }) {
                     <button
                       key={d.id}
                       type="button"
-                      onClick={() => !disabled && setSelectedIssuedDocId(d.id)}
+                      onClick={() => {
+                        if (disabled) return;
+                        setSelectedIssuedDocId(d.id);
+                        // Clear any uploaded file when choosing an issued doc
+                        setUploadFile(null);
+                        setSelectedIssuerId("");
+                      }}
                       className={`rounded-lg border p-3 text-left transition ${
                         selected ? "border-primary ring-2 ring-primary/30" : "border-border hover:bg-foreground/5"
                       } ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
@@ -503,13 +512,22 @@ export default function ClaimSubmit({ patientId }: { patientId: number }) {
               {!hasActiveDocs && (
                 <div className="mt-3">
                   <FileUpload
+                    key={`upload-${uploadKey}-locked`}
                     id="claim-upload-locked"
                     label="Or upload an unverified report"
                     accept=".pdf,.jpg,.jpeg,.png"
                     value={uploadFile}
-                    onChange={(f) => setUploadFile((f as File) || null)}
+                    onChange={(f) => {
+                      const file = (f as File) || null;
+                      setUploadFile(file);
+                      if (file) {
+                        // Clear issued doc selection when uploading a file
+                        setSelectedIssuedDocId("");
+                      }
+                    }}
                     maxSize={10}
                     description="PDF or Image up to 10MB"
+                    disabled={submitting}
                   />
                   {/* Issuer selection for unverified report */}
                   <div className="mt-2">
@@ -539,13 +557,21 @@ export default function ClaimSubmit({ patientId }: { patientId: number }) {
                 <div className="mt-3">
                   <div className="text-xs text-muted-foreground mb-1">Prefer uploading instead? Leave the selection empty and attach a file below.</div>
                   <FileUpload
+                    key={`upload-${uploadKey}-alt`}
                     id="claim-upload-alt"
                     label="Upload report instead of selecting"
                     accept=".pdf,.jpg,.jpeg,.png"
                     value={uploadFile}
-                    onChange={(f) => setUploadFile((f as File) || null)}
+                    onChange={(f) => {
+                      const file = (f as File) || null;
+                      setUploadFile(file);
+                      if (file) {
+                        setSelectedIssuedDocId("");
+                      }
+                    }}
                     maxSize={10}
                     description="PDF or Image up to 10MB"
+                    disabled={submitting}
                   />
                   {needIssuerSelection && (
                     <div className="mt-2">
@@ -575,13 +601,21 @@ export default function ClaimSubmit({ patientId }: { patientId: number }) {
           ) : (
             <div>
               <FileUpload
+                key={`upload-${uploadKey}-empty`}
                 id="claim-upload-empty"
                 label="Upload your report (no issued documents found)"
                 accept=".pdf,.jpg,.jpeg,.png"
                 value={uploadFile}
-                onChange={(f) => setUploadFile((f as File) || null)}
+                onChange={(f) => {
+                  const file = (f as File) || null;
+                  setUploadFile(file);
+                  if (file) {
+                    setSelectedIssuedDocId("");
+                  }
+                }}
                 maxSize={10}
                 description="PDF or Image up to 10MB"
+                disabled={submitting}
               />
               {/* Issuer selection for unverified report when no issued docs exist */}
               <div className="mt-2">
