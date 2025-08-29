@@ -57,6 +57,7 @@ export default function AvailableQueue() {
   const [insuranceId, setInsuranceId] = useState<string>("");
 
   const [insuranceMap, setInsuranceMap] = useState<Record<number, string>>({});
+  const [submissionCounts, setSubmissionCounts] = useState<Record<number, number>>({});
   // Cookie-based session will identify the validator; no wallet needed for filtering
 
   // Submit Result modal state
@@ -122,6 +123,33 @@ export default function AvailableQueue() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [insuranceId, page, pageSize, search]);
 
+  // Fetch on-chain submission counts per task to show progress (x/y validators)
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        const rows = items || [];
+        if (!rows.length) { setSubmissionCounts({}); return; }
+        const { ethers } = await import("ethers");
+        // Default to Polygon Amoy public RPC for read-only
+        const rpc = "https://rpc-amoy.polygon.technology";
+        const provider = new ethers.JsonRpcProvider(rpc);
+        const res: Record<number, number> = {};
+        await Promise.all(rows.map(async (r) => {
+          try {
+            const addr = (r.contract_address || "").trim();
+            if (!addr || !/^0x[a-fA-F0-9]{40}$/.test(addr)) return;
+            const contract = new ethers.Contract(ethers.getAddress(addr), CONTRACT_ABI as any, provider);
+            const cnt = await contract.getSubmissionCount(r.task_id);
+            res[r.task_id] = Number(cnt);
+          } catch { /* ignore per-row errors */ }
+        }));
+        setSubmissionCounts(res);
+      } catch { /* ignore global errors */ }
+    };
+    fetchCounts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items]);
+
   const pageNumbers = (() => {
     const maxButtons = 5;
     const pages: (number | string)[] = [];
@@ -170,8 +198,8 @@ export default function AvailableQueue() {
 
   const handleSubmitOnChain = async () => {
     if (!activeTask) return;
-    const contractAddress = (activeTask.contract_address || "").trim();
-    if (!contractAddress || !/^0x[a-fA-F0-9]{40}$/.test(contractAddress)) {
+    const rawAddr = (activeTask.contract_address || "").trim();
+    if (!rawAddr || !/^0x[a-fA-F0-9]{40}$/.test(rawAddr)) {
       toast({ title: "Missing contract address", description: "Task is missing a valid contract address.", variant: "destructive" });
       return;
     }
@@ -192,12 +220,61 @@ export default function AvailableQueue() {
         try {
           await (window as any).ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0x13882" }] });
           network = await provider.getNetwork();
-        } catch {}
+        } catch (switchErr) {
+          try {
+            await (window as any).ethereum.request({
+              method: "wallet_addEthereumChain",
+              params: [{
+                chainId: "0x13882",
+                chainName: "Polygon Amoy",
+                nativeCurrency: { name: "POL", symbol: "POL", decimals: 18 },
+                rpcUrls: ["https://rpc-amoy.polygon.technology"],
+                blockExplorerUrls: ["https://www.oklink.com/amoy"],
+              }],
+            });
+            network = await provider.getNetwork();
+          } catch {
+            throw new Error("Please switch to Polygon Amoy/Mainnet in MetaMask");
+          }
+        }
       }
       const signer = await provider.getSigner();
-      const contract = new ethers.Contract(contractAddress.trim(), CONTRACT_ABI as any, signer);
-      // Call submitResult(taskId, resultCid)
-      const tx = await contract.submitResult(activeTask.task_id, cid);
+      // Normalize address (checksummed) and instantiate
+      let contractAddress: string;
+      try { contractAddress = ethers.getAddress(rawAddr); } catch { throw new Error("Invalid contract address"); }
+      const contract = new ethers.Contract(contractAddress, CONTRACT_ABI as any, signer);
+
+      // Optional read: prevent obvious finalized task submissions
+      try {
+        const info = await contract.getTaskInfo(activeTask.task_id);
+        if (info?.finalized) {
+          throw new Error("Task already finalized on-chain");
+        }
+      } catch (_) { /* ignore read errors; continue */ }
+
+      // Prepare function handle (ethers v6)
+      const submitFn = contract.getFunction("submitResult");
+      // Simulate to surface revert reason before sending a tx
+      try {
+        await submitFn.staticCall(activeTask.task_id, cid);
+      } catch (simErr: any) {
+        const msg = simErr?.shortMessage || simErr?.reason || simErr?.error?.message || simErr?.message || "Simulation failed";
+        throw new Error(`Transaction would revert: ${msg}`);
+      }
+
+      // Estimate gas and apply a safety margin
+      let gasLimit;
+      try {
+        const est = await submitFn.estimateGas(activeTask.task_id, cid);
+        // add 20% buffer
+        gasLimit = (est * 12n) / 10n;
+      } catch {
+        // fallback to a reasonable default if estimation fails
+        gasLimit = 300000n;
+      }
+
+      // Send transaction with gas limit
+      const tx = await submitFn.send(activeTask.task_id, cid, { gasLimit });
       const rec = await tx.wait();
 
       // Record validator submission in backend (multi-validator aware)
@@ -217,7 +294,9 @@ export default function AvailableQueue() {
       setTimeout(() => load(), 500);
     } catch (e: any) {
       console.error(e);
-      toast({ title: "On-chain submission failed", description: e?.message || "Error", variant: "destructive" });
+      // Try to present a clearer, decoded error message
+      const msg = e?.shortMessage || e?.reason || e?.info?.error?.message || e?.data?.message || e?.message || "Unknown error";
+      toast({ title: "On-chain submission failed", description: msg, variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
@@ -283,7 +362,11 @@ export default function AvailableQueue() {
                     <td className="p-2 align-top"><a href={r.report_url} target="_blank" className="text-primary underline">Open</a></td>
                     <td className="p-2 align-top">{r.task_id}</td>
                     <td className="p-2 align-top"><Badge variant="outline">{r.status ?? '-'}</Badge></td>
-                    <td className="p-2 align-top">{r.required_validators ?? '-'}</td>
+                    <td className="p-2 align-top">
+                      {typeof r.required_validators === 'number'
+                        ? `${submissionCounts[r.task_id] ?? 0}/${r.required_validators}`
+                        : '-'}
+                    </td>
                     <td className="p-2 align-top">{formatReward(r.reward_pol)}</td>
                     <td className="p-2 align-top whitespace-nowrap">{new Date(r.created_at).toLocaleString("en-US")}</td>
                     <td className="p-2 align-top">
