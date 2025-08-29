@@ -407,10 +407,10 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
       const signer = await provider.getSigner();
       const contract = new ethers.Contract(contractAddress!, CONTRACT_ABI, signer);
       // value based on current rewardPol input (default 0)
-      const valueWei = (() => { try { return ethers.parseEther((rewardPol || "0").toString()); } catch { return 0n; } })();
+      const valueWei = (() => { try { return ethers.parseEther((rewardPol || "0").toString()); } catch { return BigInt(0); } })();
       const est = await contract.createTask.estimateGas(sampleDoc, BigInt(Math.max(1, requiredValidators || 1)), { value: valueWei });
       const feeData = await provider.getFeeData();
-      const gp = (feeData.maxFeePerGas || feeData.gasPrice || 0n);
+      const gp = (feeData.maxFeePerGas || feeData.gasPrice || BigInt(0));
       setEstGasPerTaskWei(est);
       setEstGasPriceWei(gp);
     } catch {
@@ -426,12 +426,47 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
     if (!contractAddress) return toast({ title: "No contract", description: "Deploy or set a contract first.", variant: "destructive" });
     const count = batchDocs.length > 0 ? batchDocs.length : (selectedDocCid ? 1 : 0);
     if (count === 0 || requiredValidators <= 0) return toast({ title: "Missing fields", description: "Provide validators and select at least one document.", variant: "destructive" });
+    // Enforce positive reward to avoid contract reverts on payable function
+    try {
+      const testReward = (await import("ethers")).ethers.parseEther((rewardPol || "0").toString());
+      if (testReward <= BigInt(0)) {
+        return toast({ title: "Reward must be > 0", description: "Enter a positive POL amount for the bounty.", variant: "destructive" });
+      }
+    } catch {
+      return toast({ title: "Invalid reward", description: "Enter a valid number for POL amount.", variant: "destructive" });
+    }
     setLoadingWeb3(true);
     setBatchProgress({ done: 0, total: count });
     try {
       const { ethers } = await import("ethers");
       // @ts-ignore
       const provider = new ethers.BrowserProvider((window as any).ethereum);
+      // Ensure wallet access and correct chain before proceeding
+      try { await provider.send("eth_requestAccounts", []); } catch { throw new Error("Wallet access rejected"); }
+      const targetChains = new Set([0x13882, 0x89]);
+      let network = await provider.getNetwork();
+      if (!targetChains.has(Number(network.chainId))) {
+        try {
+          await (window as any).ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0x13882" }] });
+          network = await provider.getNetwork();
+        } catch (switchErr: any) {
+          try {
+            await (window as any).ethereum.request({
+              method: "wallet_addEthereumChain",
+              params: [{
+                chainId: "0x13882",
+                chainName: "Polygon Amoy",
+                nativeCurrency: { name: "POL", symbol: "POL", decimals: 18 },
+                rpcUrls: ["https://rpc-amoy.polygon.technology"],
+                blockExplorerUrls: ["https://www.oklink.com/amoy"],
+              }],
+            });
+            network = await provider.getNetwork();
+          } catch {
+            throw new Error("Please switch to Polygon Amoy/Mainnet in MetaMask");
+          }
+        }
+      }
       const signer = await provider.getSigner();
       if (!Array.isArray(CONTRACT_ABI) || CONTRACT_ABI.length === 0) {
         toast({ title: "ABI missing", description: "Set ABI in documentValidationBounty.ts", variant: "destructive" });
@@ -449,11 +484,11 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
       for (let i = 0; i < docsToCreate.length; i++) {
         const entry = docsToCreate[i];
         try {
-          // Preflight
+          // Preflight and gas estimate
           await contract.createTask.staticCall(entry.docCid, BigInt(requiredValidators), { value: rewardWeiPerTask });
-          await contract.createTask.estimateGas(entry.docCid, BigInt(requiredValidators), { value: rewardWeiPerTask });
-          // Send
-          const tx = await contract.createTask(entry.docCid, BigInt(requiredValidators), { value: rewardWeiPerTask });
+          const gasEst = await contract.createTask.estimateGas(entry.docCid, BigInt(requiredValidators), { value: rewardWeiPerTask });
+          // Send with explicit gasLimit
+          const tx = await contract.createTask(entry.docCid, BigInt(requiredValidators), { value: rewardWeiPerTask, gasLimit: gasEst });
           const rc = await tx.wait();
           let onchainTaskId: number | null = null;
           try {
@@ -477,6 +512,7 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
             const persist = await fetch(`${api}/web3/tasks`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
+              credentials: 'include',
               body: JSON.stringify({
                 user_id: userId,
                 contract_address: contractAddress,
@@ -495,7 +531,9 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
             console.warn("save_task error", perr);
           }
         } catch (err: any) {
-          const msg = err?.shortMessage || err?.reason || err?.message || "Error";
+          const inner = (err?.info?.error || err?.error || err?.data || {}) as any;
+          const innerMsg = inner?.message || inner?.data || inner?.reason;
+          const msg = innerMsg || err?.shortMessage || err?.reason || err?.message || "Error";
           failures.push({ claim_id: entry.claim_id, docCid: entry.docCid, error: msg });
         } finally {
           setBatchProgress((p) => ({ done: p.done + 1, total: p.total }));
