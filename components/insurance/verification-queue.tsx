@@ -59,6 +59,8 @@ export default function VerificationQueue({ insuranceId }: VerificationQueueProp
         page: String(page),
         page_size: String(pageSize),
       });
+      // For insurance view: include tasks with both pending and completed statuses, while backend still checks claims.status
+      qs.set("include_completed", "true");
       if (search.trim()) qs.set("search", search.trim());
       const resp = await fetch(`${api}/verification-queue?${qs.toString()}`);
       if (!resp.ok) throw new Error(`fetch queue failed ${resp.status}`);
