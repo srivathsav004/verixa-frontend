@@ -35,6 +35,17 @@ type CompletedItem = {
 
 type InsuranceListItem = { insurance_id: number; company_name: string };
 
+type SubmissionItem = {
+  id: number;
+  task_id: number;
+  validator_user_id: number;
+  result_cid: string;
+  tx_hash?: string | null;
+  status: string;
+  created_at: string;
+  wallet_address?: string | null;
+};
+
 export default function CompletedHistory() {
   const api = useMemo(() => (config.apiBaseUrl || "http://127.0.0.1:8000") + "/api", []);
   const { toast } = useToast();
@@ -50,6 +61,11 @@ export default function CompletedHistory() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
+
+  // Submissions cache and UI expand state
+  const [subsByTask, setSubsByTask] = useState<Record<number, SubmissionItem[]>>({});
+  const [subsLoading, setSubsLoading] = useState<Record<number, boolean>>({});
+  const [expanded, setExpanded] = useState<Record<number, boolean>>({});
 
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
 
@@ -84,6 +100,19 @@ export default function CompletedHistory() {
       const rows: CompletedItem[] = j.items || [];
       setItems(rows);
       setTotal(j.total ?? rows.length ?? 0);
+
+      // Prune submissions/expanded state for tasks no longer in view
+      const visibleTaskIds = new Set(rows.map(r => r.task_id));
+      setSubsByTask(prev => {
+        const next: Record<number, SubmissionItem[]> = {};
+        Object.keys(prev).forEach(k => { const id = Number(k); if (visibleTaskIds.has(id)) next[id] = prev[id]; });
+        return next;
+      });
+      setExpanded(prev => {
+        const next: Record<number, boolean> = {};
+        Object.keys(prev).forEach(k => { const id = Number(k); if (visibleTaskIds.has(id)) next[id] = prev[id]; });
+        return next;
+      });
     } catch (e: any) {
       console.error(e);
       toast({ title: "Load failed", description: e?.message || "Error", variant: "destructive" });
@@ -132,6 +161,30 @@ export default function CompletedHistory() {
     return `https://ipfs.io/ipfs/${cid}`;
   };
 
+  const fetchSubmissions = async (taskId: number) => {
+    // Avoid duplicate loads
+    if (subsByTask[taskId] && subsByTask[taskId].length) return;
+    setSubsLoading(prev => ({ ...prev, [taskId]: true }));
+    try {
+      const res = await fetch(`${api}/validator/submissions/by-task/${taskId}`);
+      if (!res.ok) throw new Error(`submissions fetch failed ${res.status}`);
+      const j = await res.json();
+      const list: SubmissionItem[] = j.items || [];
+      setSubsByTask(prev => ({ ...prev, [taskId]: list }));
+    } catch (e: any) {
+      console.error(e);
+      toast({ title: "Load submissions failed", description: e?.message || "Error", variant: "destructive" });
+    } finally {
+      setSubsLoading(prev => ({ ...prev, [taskId]: false }));
+    }
+  };
+
+  const togglePreview = async (taskId: number) => {
+    // Load once on first expand
+    if (!expanded[taskId]) await fetchSubmissions(taskId);
+    setExpanded(prev => ({ ...prev, [taskId]: !prev[taskId] }));
+  };
+
   return (
     <div className="max-w-full">
       <Card className="border-border">
@@ -176,6 +229,7 @@ export default function CompletedHistory() {
                   <th className="p-2 text-left">Submission Time</th>
                   <th className="p-2 text-left">Submitted Report</th>
                   <th className="p-2 text-left">Submission Tx</th>
+                  <th className="p-2 text-left">Responses</th>
                   <th className="p-2 text-left">Status</th>
                 </tr>
               </thead>
@@ -187,24 +241,74 @@ export default function CompletedHistory() {
                   <tr><td colSpan={12} className="p-3 text-muted-foreground">No records</td></tr>
                 )}
                 {!loading && items.map((r, idx) => (
-                  <tr key={`${r.task_id}-${idx}`} className={`${idx % 2 ? "bg-foreground/5/20" : ""} hover:bg-foreground/5`}>
-                    <td className="p-2 align-top">{(page - 1) * pageSize + idx + 1}</td>
-                    <td className="p-2 align-top">{r.company_name || '-'}</td>
-                    <td className="p-2 align-top">{r.claim_id}</td>
-                    <td className="p-2 align-top">{r.report_url ? (<a href={r.report_url} target="_blank" className="text-primary underline">Open</a>) : '-'}</td>
-                    <td className="p-2 align-top">{r.task_id}</td>
-                    <td className="p-2 align-top">{r.required_validators ?? '-'}</td>
-                    <td className="p-2 align-top">{formatReward(r.reward_pol)}</td>
-                    <td className="p-2 align-top whitespace-nowrap">{new Date(r.created_at).toLocaleString("en-US")}</td>
-                    <td className="p-2 align-top whitespace-nowrap">{r.last_submission_created_at ? new Date(r.last_submission_created_at as any).toLocaleString("en-US") : '-'}</td>
-                    <td className="p-2 align-top">{
-                      r.last_submission_result_cid ? (
-                        <a href={cidToUrl(r.last_submission_result_cid)} target="_blank" className="text-primary underline">Open</a>
-                      ) : '-'
-                    }</td>
-                    <td className="p-2 align-top">{r.last_submission_tx_hash ? (<a className="text-primary underline" href={`https://amoy.polygonscan.com/tx/${r.last_submission_tx_hash}`} target="_blank">{short(r.last_submission_tx_hash)}</a>) : '-'}</td>
-                    <td className="p-2 align-top"><span className="px-2 py-1 rounded-md border border-border text-xs">{r.status}</span></td>
-                  </tr>
+                  <>
+                    <tr key={`row-${r.task_id}-${idx}`} className={`${idx % 2 ? "bg-foreground/5/20" : ""} hover:bg-foreground/5`}>
+                      <td className="p-2 align-top">{(page - 1) * pageSize + idx + 1}</td>
+                      <td className="p-2 align-top">{r.company_name || '-'}</td>
+                      <td className="p-2 align-top">{r.claim_id}</td>
+                      <td className="p-2 align-top">{r.report_url ? (<a href={r.report_url} target="_blank" className="text-primary underline">Open</a>) : '-'}</td>
+                      <td className="p-2 align-top">{r.task_id}</td>
+                      <td className="p-2 align-top">{r.required_validators ?? '-'}</td>
+                      <td className="p-2 align-top">{formatReward(r.reward_pol)}</td>
+                      <td className="p-2 align-top whitespace-nowrap">{new Date(r.created_at).toLocaleString("en-US")}</td>
+                      <td className="p-2 align-top whitespace-nowrap">{r.last_submission_created_at ? new Date(r.last_submission_created_at as any).toLocaleString("en-US") : '-'}</td>
+                      <td className="p-2 align-top">{
+                        r.last_submission_result_cid ? (
+                          <a href={cidToUrl(r.last_submission_result_cid)} target="_blank" className="text-primary underline">Open</a>
+                        ) : '-'
+                      }</td>
+                      <td className="p-2 align-top">{r.last_submission_tx_hash ? (<a className="text-primary underline" href={`https://amoy.polygonscan.com/tx/${r.last_submission_tx_hash}`} target="_blank">{short(r.last_submission_tx_hash)}</a>) : '-'}</td>
+                      <td className="p-2 align-top">
+                        <button
+                          className="text-primary underline disabled:opacity-50"
+                          disabled={!!subsLoading[r.task_id]}
+                          onClick={(e) => { e.preventDefault(); togglePreview(r.task_id); }}
+                        >
+                          {expanded[r.task_id] ? 'Hide' : (subsByTask[r.task_id]?.length === 1 ? 'Open response' : 'Preview responses')}
+                        </button>
+                      </td>
+                      <td className="p-2 align-top"><span className="px-2 py-1 rounded-md border border-border text-xs">{r.status}</span></td>
+                    </tr>
+                    {expanded[r.task_id] && (
+                      <tr key={`exp-${r.task_id}-${idx}`} className={`${idx % 2 ? "bg-foreground/5/20" : ""}`}>
+                        <td className="p-2" colSpan={13}>
+                          {subsLoading[r.task_id] && <div className="text-sm">Loading responses...</div>}
+                          {!subsLoading[r.task_id] && (subsByTask[r.task_id]?.length || 0) === 0 && (
+                            <div className="text-sm text-muted-foreground">No submissions found.</div>
+                          )}
+                          {!subsLoading[r.task_id] && (subsByTask[r.task_id]?.length || 0) === 1 && (
+                            <div className="text-sm">
+                              {(() => { const s = subsByTask[r.task_id][0]; return (
+                                <>
+                                  <div className="flex flex-wrap gap-3 items-center">
+                                    <span className="text-xs rounded-md border border-border px-2 py-0.5">Validator: {s.wallet_address ? short(s.wallet_address) : `#${s.validator_user_id}`}</span>
+                                    <span className="text-xs text-muted-foreground">{new Date(s.created_at as any).toLocaleString("en-US")}</span>
+                                    <a href={cidToUrl(s.result_cid)} target="_blank" className="text-primary underline">Open submitted report</a>
+                                    {s.tx_hash && <a className="text-primary underline" href={`https://amoy.polygonscan.com/tx/${s.tx_hash}`} target="_blank">Tx {short(s.tx_hash)}</a>}
+                                  </div>
+                                </>
+                              ); })()}
+                            </div>
+                          )}
+                          {!subsLoading[r.task_id] && (subsByTask[r.task_id]?.length || 0) > 1 && (
+                            <div className="text-sm">
+                              <div className="mb-2 text-xs text-muted-foreground">{subsByTask[r.task_id].length} submissions</div>
+                              <ul className="space-y-2">
+                                {subsByTask[r.task_id].map((s, i) => (
+                                  <li key={`${s.id}-${i}`} className="flex flex-wrap items-center gap-3">
+                                    <span className="text-xs rounded-md border border-border px-2 py-0.5">Validator: {s.wallet_address ? short(s.wallet_address) : `#${s.validator_user_id}`}</span>
+                                    <span className="text-xs text-muted-foreground">{new Date(s.created_at as any).toLocaleString("en-US")}</span>
+                                    <a href={cidToUrl(s.result_cid)} target="_blank" className="text-primary underline">Open</a>
+                                    {s.tx_hash && <a className="text-primary underline" href={`https://amoy.polygonscan.com/tx/${s.tx_hash}`} target="_blank">Tx {short(s.tx_hash)}</a>}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                  </>
                 ))}
               </tbody>
             </table>

@@ -183,41 +183,7 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
     }
   };
 
-  const approveSelected = async () => {
-    const ids = Object.entries(selected).filter(([, v]) => v).map(([k]) => Number(k));
-    if (ids.length === 0) return toast({ title: "No selection", description: "Select claims to approve.", variant: "destructive" });
-    try {
-      const res = await fetch(`${api}/claims/bulk-verify-approve`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ claim_ids: ids }),
-      });
-      if (!res.ok) throw new Error("approve failed");
-      toast({ title: "Approved", description: `Approved ${ids.length} claim(s)` });
-      fetchUnassigned();
-    } catch (e) {
-      console.error(e);
-      toast({ title: "Approve failed", description: "Please try again.", variant: "destructive" });
-    }
-  };
-
-  const rejectSelected = async () => {
-    const ids = Object.entries(selected).filter(([, v]) => v).map(([k]) => Number(k));
-    if (ids.length === 0) return toast({ title: "No selection", description: "Select claims to reject.", variant: "destructive" });
-    try {
-      const res = await fetch(`${api}/claims/bulk-status`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ claim_ids: ids, status: "rejected" }),
-      });
-      if (!res.ok) throw new Error("reject failed");
-      toast({ title: "Rejected", description: `Rejected ${ids.length} claim(s)` });
-      fetchUnassigned();
-    } catch (e) {
-      console.error(e);
-      toast({ title: "Reject failed", description: "Please try again.", variant: "destructive" });
-    }
-  };
+  
 
   const fetchPatientName = async (patientId: number) => {
     if (patientNames[patientId]) return;
@@ -810,8 +776,6 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
 
             {viewMode === 'unassigned' ? (
               <div className="ml-auto flex flex-wrap items-center gap-2">
-                <Button variant="secondary" onClick={approveSelected} disabled={loading}>Approve Selected</Button>
-                <Button variant="destructive" onClick={rejectSelected} disabled={loading}>Reject Selected</Button>
                 <Button onClick={handleOpenCreateTask} disabled={loading || !contractAddress}>Create Task</Button>
               </div>
             ) : null}
