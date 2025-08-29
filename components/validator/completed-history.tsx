@@ -76,7 +76,9 @@ export default function CompletedHistory() {
       const qs = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
       if (insuranceId) qs.set("insurance_id", insuranceId);
       if (search.trim()) qs.set("search", search.trim());
-      const resp = await fetch(`${api}/tasks/completed?${qs.toString()}`);
+      // Only fetch tasks completed by the current validator (resolved via cookie on backend)
+      qs.set("only_mine", "1");
+      const resp = await fetch(`${api}/tasks/completed?${qs.toString()}` , { credentials: "include" });
       if (!resp.ok) throw new Error(`fetch completed failed ${resp.status}`);
       const j = await resp.json();
       const rows: CompletedItem[] = j.items || [];
