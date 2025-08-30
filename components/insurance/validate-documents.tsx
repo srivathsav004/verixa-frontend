@@ -825,7 +825,6 @@ export default function ValidateDocuments({ insuranceId }: ValidateDocumentsProp
               <Input type="number" min={0} step="0.0001" value={rewardPol} onChange={(e) => setRewardPol(e.target.value)} />
               <FeeSummary />
             </div>
-            <div className="text-xs text-muted-foreground">Contract ABI loaded from <code>lib/contracts/documentValidationBounty.ts</code>.</div>
           </div>
           <DialogFooter>
             <Button onClick={handleCreateTask} disabled={loadingWeb3 || !contractAddress}>
