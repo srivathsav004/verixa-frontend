@@ -32,6 +32,7 @@ export function FileUpload({
 }: FileUploadProps) {
   const [dragActive, setDragActive] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const [sizeError, setSizeError] = useState<string | null>(null)
 
   const files = multiple 
     ? (Array.isArray(value) ? value : value ? [value] : [])
@@ -66,11 +67,23 @@ export function FileUpload({
   }
 
   const handleFiles = (newFiles: File[]) => {
-    // Filter files by size
+    // Filter files by size and capture any that exceed the limit
+    let hasOversized = false
     const validFiles = newFiles.filter(file => {
       const sizeInMB = file.size / (1024 * 1024)
-      return sizeInMB <= maxSize
+      if (sizeInMB > maxSize) {
+        hasOversized = true
+        return false
+      }
+      return true
     })
+
+    // Set or clear size error message
+    if (hasOversized) {
+      setSizeError(`One or more files exceed the ${maxSize}MB limit. Please upload files up to ${maxSize}MB.`)
+    } else {
+      setSizeError(null)
+    }
 
     if (multiple) {
       const currentFiles = Array.isArray(value) ? value : []
@@ -194,6 +207,10 @@ export function FileUpload({
         )}
       </div>
       
+      {sizeError && (
+        <p className="text-xs text-red-400">{sizeError}</p>
+      )}
+
       {/* File count indicator for multiple files */}
       {multiple && files.length > 0 && (
         <p className="text-xs text-gray-400">

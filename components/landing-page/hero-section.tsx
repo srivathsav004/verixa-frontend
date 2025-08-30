@@ -98,7 +98,7 @@ export function HeroSection() {
                 hover:shadow-white/10
               "
             >
-              Request Demo
+              Documentation
             </Button>
           </Link>
         </motion.div>
