@@ -98,7 +98,7 @@ export default function ClaimHistory({ patientId }: { patientId: number }) {
   };
 
   const prettyDate = (iso: string) => {
-    try { return new Date(iso).toLocaleString(); } catch { return iso; }
+    try { return new Date(iso).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }); } catch { return iso; }
   };
 
   // Show approved and rejected in history view

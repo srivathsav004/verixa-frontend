@@ -484,7 +484,7 @@ export default function ClaimSubmit({ patientId }: { patientId: number }) {
                         <div className="flex-1 min-w-0">
                           <div className="font-medium truncate">{d.report_type}</div>
                           <div className="text-xs text-muted-foreground">
-                            {new Date(d.created_at).toLocaleDateString()}
+                            {new Date(d.created_at).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" })}
                           </div>
                         </div>
                         <span className={`text-[10px] rounded px-1.5 py-0.5 whitespace-nowrap ${

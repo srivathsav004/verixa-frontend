@@ -97,7 +97,7 @@ export default function ClaimStatus({ patientId }: { patientId: number }) {
   };
 
   const prettyDate = (iso: string) => {
-    try { return new Date(iso).toLocaleString(); } catch { return iso; }
+    try { return new Date(iso).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }); } catch { return iso; }
   };
 
   const statusVariant = (s: string): "default" | "secondary" | "destructive" | "outline" => {

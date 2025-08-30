@@ -54,6 +54,18 @@ export default function ReportsHistory() {
 
   // Map patient_id -> full name
   const [patientMap, setPatientMap] = useState<Record<number, string>>({});
+  // Format created_at to IST robustly even if backend sends timestamps without timezone suffix
+  const formatIST = (ts: string) => {
+    try {
+      const s = String(ts).trim();
+      const hasTZ = /([zZ]|[+-]\d{2}:?\d{2})$/.test(s);
+      const isoLike = s.includes("T") ? s : s.replace(" ", "T");
+      const date = new Date(hasTZ ? isoLike : isoLike + "Z");
+      return date.toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+    } catch {
+      return String(ts);
+    }
+  };
   // Single fetch of all issued docs
   useEffect(() => {
     let ignore = false;
@@ -162,7 +174,7 @@ export default function ReportsHistory() {
                     <td className="p-2 align-top">
                       <a href={r.document_url} target="_blank" className="text-primary underline">Open</a>
                     </td>
-                    <td className="p-2 align-top whitespace-nowrap">{new Date(r.created_at).toLocaleString()}</td>
+                    <td className="p-2 align-top whitespace-nowrap">{formatIST(r.created_at)}</td>
                   </tr>
                 ))}
               </tbody>
