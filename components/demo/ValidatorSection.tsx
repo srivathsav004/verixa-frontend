@@ -4,9 +4,10 @@ import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import Image from "next/image";
 
 export function ValidatorSection() {
-  const [activeTab, setActiveTab] = useState<string>("tasks");
+  const [activeTab, setActiveTab] = useState<string>("dashboard");
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2">
@@ -16,53 +17,76 @@ export function ValidatorSection() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
+          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="tasks">Available Queue</TabsTrigger>
           <TabsTrigger value="active">Active Validations</TabsTrigger>
           <TabsTrigger value="rewards">Rewards</TabsTrigger>
           <TabsTrigger value="future">Future</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="tasks">
+        <TabsContent value="dashboard">
           <Card>
             <CardHeader>
-              <CardTitle>Task Management</CardTitle>
-              <CardDescription>Filter, accept, and validate</CardDescription>
+              <CardTitle>Validator Dashboard</CardTitle>
+              <CardDescription>Your overview: tasks, performance, and rewards.</CardDescription>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground space-y-4">
               <div>
-                <h4 className="font-semibold">Lifecycle</h4>
-                <ol className="list-decimal ml-5 space-y-1">
-                  <li>Browse queue → filter by reward, SLA, specialty.</li>
-                  <li>Open task → review claim context and issuer metadata.</li>
-                  <li>Accept task → slot reserved until SLA expires.</li>
-                  <li>Submit verdict with notes and evidence highlights.</li>
-                </ol>
+                <h4 className="font-semibold">Role</h4>
+                <ul className="list-disc ml-5 space-y-1">
+                  <li>Review assigned documents and submit validation results on-chain.</li>
+                  <li>Help achieve consensus across multiple validators per task.</li>
+                  <li>Earn POL rewards automatically when tasks reach Completed.</li>
+                </ul>
               </div>
               <div>
-                <h4 className="font-semibold">Example Tasks</h4>
-                <div className="rounded-md border border-border divide-y">
-                  <div className="grid grid-cols-4 gap-2 p-2 text-xs text-muted-foreground">
-                    <div className="font-medium text-foreground">Task</div>
-                    <div className="font-medium text-foreground">Reward (POL)</div>
-                    <div className="font-medium text-foreground">SLA</div>
-                    <div className="font-medium text-foreground">Status</div>
-                  </div>
-                  <div className="grid grid-cols-4 gap-2 p-2 text-xs">
-                    <div>#4218 – MRI Report</div>
-                    <div>0.12</div>
-                    <div>24h</div>
-                    <div>Open</div>
-                  </div>
-                  <div className="grid grid-cols-4 gap-2 p-2 text-xs">
-                    <div>#4227 – Lab Panel</div>
-                    <div>0.10</div>
-                    <div>12h</div>
-                    <div>Open</div>
-                  </div>
-                </div>
+                <h4 className="font-semibold">At a glance</h4>
+                <ul className="list-disc ml-5 space-y-1">
+                  <li>Open tasks, active validations waiting on others, and completion rate.</li>
+                  <li>Recent payouts and estimated rewards in pipeline.</li>
+                  <li>Accuracy and reputation indicators (future).</li>
+                </ul>
               </div>
-              <div className="aspect-video w-full rounded-md border border-dashed border-border flex items-center justify-center text-xs">
-                Screenshot placeholder: Task queue
+              <div className="mt-2">
+                <Image
+                  src="/screenshots/validator/dashboard.png"
+                  alt="Validator dashboard overview"
+                  width={1919}
+                  height={859}
+                  className="w-full h-auto rounded-md border border-border bg-muted/20"
+                  sizes="(max-width: 768px) 100vw, 800px"
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="tasks">
+          <Card>
+            <CardHeader>
+              <CardTitle>Available Queue</CardTitle>
+              <CardDescription>Browse pending tasks and submit your validation.</CardDescription>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground space-y-4">
+              <div>
+                <h4 className="font-semibold">How it works</h4>
+                <ol className="list-decimal ml-5 space-y-1">
+                  <li>Filter by insurance, reward, SLA, or specialty.</li>
+                  <li>Open a task to review the claim/report context and issuer metadata.</li>
+                  <li>Submit your result (CID) with notes/evidence.</li>
+                  <li>If more validators are needed, the task remains Pending until quorum.</li>
+                </ol>
+              </div>
+              
+              <div className="mt-3">
+                <Image
+                  src="/screenshots/validator/queue.png"
+                  alt="Validator task queue with filters and rewards"
+                  width={1919}
+                  height={859}
+                  className="w-full h-auto rounded-md border border-border bg-muted/20"
+                  sizes="(max-width: 768px) 100vw, 800px"
+                />
               </div>
             </CardContent>
           </Card>
@@ -71,27 +95,34 @@ export function ValidatorSection() {
         <TabsContent value="active">
           <Card>
             <CardHeader>
-              <CardTitle>Validation Workflow</CardTitle>
+              <CardTitle>Active Validations</CardTitle>
+              <CardDescription>You've submitted your result; waiting for other validators.</CardDescription>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground space-y-4">
               <div>
-                <h4 className="font-semibold">Consensus Mechanics</h4>
+                <h4 className="font-semibold">Status tracking</h4>
                 <ul className="list-disc ml-5 space-y-1">
-                  <li>Quorum defined by insurance (e.g., 3 of 5 validators).</li>
-                  <li>Weighted voting based on historical accuracy (future).</li>
-                  <li>Auto-close when quorum reached or SLA expires.</li>
+                  <li>Shows tasks where you already submitted but status is still Pending.</li>
+                  <li>Tracks per-task progress: submitted count vs required validators.</li>
+                  <li>Auto-closes when quorum is reached or SLA expires.</li>
                 </ul>
               </div>
               <div>
-                <h4 className="font-semibold">Validation Flow</h4>
+                <h4 className="font-semibold">What you can do</h4>
                 <ul className="list-disc ml-5 space-y-1">
-                  <li>Document viewer with zoom/annotations.</li>
-                  <li>Structured checklist (format, text, metadata, forensics).</li>
-                  <li>Upload evidence snapshots and notes.</li>
+                  <li>Review your submission and notes.</li>
+                  <li>Monitor on-chain tx status and final outcome.</li>
                 </ul>
               </div>
-              <div className="aspect-video w-full rounded-md border border-dashed border-border flex items-center justify-center text-xs">
-                Screenshot placeholder: Active validation view
+              <div className="mt-3">
+                <Image
+                  src="/screenshots/validator/active-validation.png"
+                  alt="Active validation: document viewer, checklist, and evidence inputs"
+                  width={1919}
+                  height={859}
+                  className="w-full h-auto rounded-md border border-border bg-muted/20"
+                  sizes="(max-width: 768px) 100vw, 800px"
+                />
               </div>
             </CardContent>
           </Card>
@@ -100,22 +131,33 @@ export function ValidatorSection() {
         <TabsContent value="rewards">
           <Card>
             <CardHeader>
-              <CardTitle>Reward System</CardTitle>
+              <CardTitle>Rewards</CardTitle>
+              <CardDescription>Paid automatically to your wallet when tasks are Completed.</CardDescription>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground space-y-3">
               <div>
                 <h4 className="font-semibold">Payouts</h4>
                 <ul className="list-disc ml-5 space-y-1">
-                  <li>Upon consensus: smart contract distributes POL automatically.</li>
-                  <li>Split: 90% to validators (pro‑rata), 10% platform fee.</li>
+                  <li>On status "Completed", the smart contract sends POL directly to your wallet.</li>
+                  <li>Split: ~90% to validators (pro‑rata), ~10% platform fee.</li>
                 </ul>
               </div>
               <div>
-                <h4 className="font-semibold">Performance</h4>
+                <h4 className="font-semibold">History</h4>
                 <ul className="list-disc ml-5 space-y-1">
-                  <li>Accuracy score influences task access and bonuses (future).</li>
-                  <li>Transparent payment history and export.</li>
+                  <li>View completed tasks and payouts in your history.</li>
+                  <li>Export transactions for accounting.</li>
                 </ul>
+              </div>
+              <div className="mt-3">
+                <Image
+                  src="/screenshots/validator/rewards.png"
+                  alt="Validator rewards and payout history"
+                  width={1919}
+                  height={859}
+                  className="w-full h-auto rounded-md border border-border bg-muted/20"
+                  sizes="(max-width: 768px) 100vw, 800px"
+                />
               </div>
             </CardContent>
           </Card>
@@ -124,10 +166,23 @@ export function ValidatorSection() {
         <TabsContent value="future">
           <Card>
             <CardHeader>
-              <CardTitle>Future Improvements</CardTitle>
+              <CardTitle>Future</CardTitle>
+              <CardDescription>Improvements planned for validators.</CardDescription>
             </CardHeader>
-            <CardContent className="text-sm text-muted-foreground">
-              Transaction history, accuracy metrics, leaderboard, preferences, training & certification.
+            <CardContent className="text-sm text-muted-foreground space-y-3">
+              <div>
+                Transaction history, accuracy metrics, leaderboard, reputation score, settings, training & certification.
+              </div>
+              <div className="mt-1">
+                <Image
+                  src="/screenshots/validator/future.png"
+                  alt="Preview of future validator features: metrics, leaderboard, preferences"
+                  width={1919}
+                  height={859}
+                  className="w-full h-auto rounded-md border border-border bg-muted/20"
+                  sizes="(max-width: 768px) 100vw, 800px"
+                />
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
