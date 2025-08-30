@@ -63,7 +63,21 @@ export default function ActiveValidations() {
   const load = async () => {
     setLoading(true);
     try {
+      const getCookie = (name: string) =>
+        typeof document === "undefined"
+          ? ""
+          : (document.cookie
+              .split("; ")
+              .find((row) => row.startsWith(name + "="))
+              ?.split("=")[1] || "");
+
+      const uidFromCookie = getCookie("validator_user_id");
+      const uidFromStorage = typeof window !== "undefined" ? (localStorage.getItem("validator_user_id") || "") : "";
+      const validatorId = uidFromCookie || uidFromStorage;
+
       const qs = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
+      if (validatorId) qs.set("validator_user_id", validatorId);
+
       const resp = await fetch(`${api}/validator/active?${qs.toString()}`, { credentials: 'include' });
       if (!resp.ok) throw new Error(`fetch active failed ${resp.status}`);
       const j = await resp.json();

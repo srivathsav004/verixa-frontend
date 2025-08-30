@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -241,7 +241,7 @@ export default function CompletedHistory() {
                   <tr><td colSpan={12} className="p-3 text-muted-foreground">No records</td></tr>
                 )}
                 {!loading && items.map((r, idx) => (
-                  <>
+                  <Fragment key={`row-group-${r.task_id}`}>
                     <tr key={`row-${r.task_id}-${idx}`} className={`${idx % 2 ? "bg-foreground/5/20" : ""} hover:bg-foreground/5`}>
                       <td className="p-2 align-top">{(page - 1) * pageSize + idx + 1}</td>
                       <td className="p-2 align-top">{r.company_name || '-'}</td>
@@ -308,7 +308,7 @@ export default function CompletedHistory() {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 ))}
               </tbody>
             </table>
