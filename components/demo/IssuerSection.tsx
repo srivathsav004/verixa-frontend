@@ -46,9 +46,6 @@ export function IssuerSection() {
                   sizes="(max-width: 768px) 100vw, 800px"
                   priority
                 />
-                <div className="mt-2 text-[11px] text-muted-foreground">
-                  Place your screenshot at <code className="font-mono">public/screenshots/issuer/dashboard-overview.png</code>
-                </div>
               </div>
             </CardContent>
           </Card>
@@ -63,19 +60,19 @@ export function IssuerSection() {
               <div>
                 <div className="text-foreground font-medium mb-1">Issuance</div>
                 <ul className="list-disc ml-5 space-y-1">
-                  <li>Search and select enrolled patients from a paginated table.</li>
-                  <li>Specify <em>Report Type</em> (e.g., Blood Test, MRI).</li>
-                  <li>Attach the PDF report (up to 5 MB) and click <em>Issue</em>.</li>
-                  <li>Backend endpoint: <span className="font-medium text-foreground">POST /api/issuer/issued-docs</span> with <span className="font-medium text-foreground">patient_id</span>, <span className="font-medium text-foreground">issuer_id</span>, <span className="font-medium text-foreground">report_type</span>, and file.</li>
-                  <li>UI component: <span className="font-medium text-foreground">components/issuer/issue-new-document.tsx</span>.</li>
+                  <li>Find the patient in your organization’s roster and open their row.</li>
+                  <li>Choose a report type (e.g., Blood Test, MRI) and attach the PDF (max ~5 MB).</li>
+                  <li>Click <em>Issue</em> to create a verifiable record that is tied to the patient’s identity.</li>
+                  <li>Behind the scenes, the platform fingerprints the file, secures a tamper‑evident reference on‑chain, and stores the document in managed storage.</li>
+                  <li>The patient is notified immediately and can use this report for an insurance claim without extra attestations.</li>
                 </ul>
               </div>
               <div>
                 <div className="text-foreground font-medium mb-1">Records & History</div>
                 <ul className="list-disc ml-5 space-y-1">
-                  <li>Track all issued reports in <span className="font-medium text-foreground">ReportsHistory</span> (<span className="font-medium text-foreground">components/issuer/reports-history.tsx</span>).</li>
-                  <li>Status reflects verifiability and single‑use lock after a successful claim.</li>
-                  <li>Patients are notified on issuance; insurers read the report as trusted when a claim is filed.</li>
+                  <li>Track all reports your organization has issued in the <em>Reports History</em> view.</li>
+                  <li>Each item shows the current status (verifiable, used/locked after a successful claim, or revoked if applicable).</li>
+                  <li>Patients are notified on issuance; insurers treat the report as trusted when a claim is filed.</li>
                 </ul>
               </div>
               <div>
@@ -103,13 +100,13 @@ export function IssuerSection() {
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground space-y-3">
               <ol className="list-decimal ml-5 space-y-1">
-                <li>Log in as Issuer and open the dashboard (<span className="font-medium text-foreground">components/dashboard/issuer-dashboard.tsx</span>).</li>
-                <li>Navigate to <em>Issue Reports</em> → <span className="font-medium text-foreground">IssueNewDocument</span> table loads enrolled patients.</li>
-                <li>Search/select a patient, enter <em>Report Type</em>, and attach the PDF.</li>
-                <li>Click <em>Issue</em> → the platform creates a verifiable record and notifies the patient.</li>
-                <li>Patient files an insurance claim using this report. Insurer treats it as trusted (no re‑verification).</li>
-                <li><strong>Single‑use lock:</strong> after a successful claim, the report is marked used/locked and cannot be reused for another claim.</li>
-                <li>Issuer can review past issuances in <span className="font-medium text-foreground">ReportsHistory</span>.</li>
+                <li>Log in as an Issuer and open your dashboard.</li>
+                <li>Go to <em>Issue Reports</em> and locate the patient from your roster.</li>
+                <li>Select a report type, attach the PDF, and click <em>Issue</em>.</li>
+                <li>The platform timestamps and fingerprints the document, then creates a tamper‑evident reference on the blockchain.</li>
+                <li>The patient can immediately use this report to submit an insurance claim. Insurers recognize it as trusted.</li>
+                <li><strong>Single‑use lock:</strong> after the report successfully backs a claim, it is locked and cannot be reused for another claim.</li>
+                <li>Review previous issuances in <em>Reports History</em> and export logs for audits if needed.</li>
               </ol>
               <div className="mt-3">
                 <Image
@@ -120,9 +117,6 @@ export function IssuerSection() {
                   className="w-full h-auto rounded-md border border-border bg-muted/20"
                   sizes="(max-width: 768px) 100vw, 800px"
                 />
-                <div className="mt-2 text-[11px] text-muted-foreground">
-                  Place your screenshot at <code className="font-mono">public/screenshots/issuer/issue-report-flow.png</code>
-                </div>
               </div>
             </CardContent>
           </Card>
