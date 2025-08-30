@@ -239,9 +239,19 @@ export default function AvailableQueue() {
         }
       }
       const signer = await provider.getSigner();
-      // Normalize address (checksummed) and instantiate
+      // Basic wallet balance check (avoid silent RPC failures when out of gas funds)
+      try {
+        const bal = await provider.getBalance(await signer.getAddress());
+        if (bal && bal.toString() === "0") {
+          throw new Error("Wallet has 0 POL on this network. Please fund to cover gas.");
+        }
+      } catch (_) { /* ignore balance read errors */ }
+
+      // Normalize address (checksummed), verify contract code exists, and instantiate
       let contractAddress: string;
       try { contractAddress = ethers.getAddress(rawAddr); } catch { throw new Error("Invalid contract address"); }
+      const code = await provider.getCode(contractAddress);
+      if (!code || code === "0x") throw new Error("No contract found at provided address on this network");
       const contract = new ethers.Contract(contractAddress, CONTRACT_ABI as any, signer);
 
       // Optional read: prevent obvious finalized task submissions
@@ -262,19 +272,8 @@ export default function AvailableQueue() {
         throw new Error(`Transaction would revert: ${msg}`);
       }
 
-      // Estimate gas and apply a safety margin
-      let gasLimit;
-      try {
-        const est = await submitFn.estimateGas(activeTask.task_id, cid);
-        // add 20% buffer
-        gasLimit = (est * 12n) / 10n;
-      } catch {
-        // fallback to a reasonable default if estimation fails
-        gasLimit = 300000n;
-      }
-
-      // Send transaction with gas limit
-      const tx = await submitFn.send(activeTask.task_id, cid, { gasLimit });
+      // Send transaction (let wallet/provider estimate gas)
+      const tx = await submitFn.send(activeTask.task_id, cid);
       const rec = await tx.wait();
 
       // Record validator submission in backend (multi-validator aware)
@@ -295,7 +294,9 @@ export default function AvailableQueue() {
     } catch (e: any) {
       console.error(e);
       // Try to present a clearer, decoded error message
-      const msg = e?.shortMessage || e?.reason || e?.info?.error?.message || e?.data?.message || e?.message || "Unknown error";
+      const raw = e?.shortMessage || e?.reason || e?.info?.error?.message || e?.data?.message || e?.message || "Unknown error";
+      const isMM = e?.code === -32603 || /Internal JSON-RPC error/i.test(String(raw));
+      const msg = isMM ? `Wallet RPC error: ${raw}. Please ensure network is Polygon Amoy/Mainnet and try again.` : raw;
       toast({ title: "On-chain submission failed", description: msg, variant: "destructive" });
     } finally {
       setSubmitting(false);
