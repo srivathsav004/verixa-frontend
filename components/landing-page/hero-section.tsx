@@ -81,7 +81,7 @@ export function HeroSection() {
             </HoverBorderGradient>
           </Link>
 
-          <Link href="/demo">
+          <Link href="/documentation">
             <Button
               size="lg"
               className="

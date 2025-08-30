@@ -18,15 +18,15 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
-import { DemoSidebar } from "@/components/demo/DemoSidebar";
-import { OverviewSection } from "@/components/demo/OverviewSection";
-import { IssuerSection } from "@/components/demo/IssuerSection";
-import { PatientSection } from "@/components/demo/PatientSection";
-import { InsuranceSection } from "@/components/demo/InsuranceSection";
-import { ValidatorSection } from "@/components/demo/ValidatorSection";
-import { TechnicalSection } from "@/components/demo/TechnicalSection";
-import { GettingStartedSection } from "@/components/demo/GettingStartedSection";
-import { RegistrationLoginSection } from "@/components/demo/RegistrationLoginSection";
+import { DemoSidebar } from "@/components/documentation/DemoSidebar";
+import { OverviewSection } from "@/components/documentation/OverviewSection";
+import { IssuerSection } from "@/components/documentation/IssuerSection";
+import { PatientSection } from "@/components/documentation/PatientSection";
+import { InsuranceSection } from "@/components/documentation/InsuranceSection";
+import { ValidatorSection } from "@/components/documentation/ValidatorSection";
+import { TechnicalSection } from "@/components/documentation/TechnicalSection";
+import { GettingStartedSection } from "@/components/documentation/GettingStartedSection";
+import { RegistrationLoginSection } from "@/components/documentation/RegistrationLoginSection";
 import { Logo } from "@/components/common/Logo";
 
 export default function DemoPage() {
