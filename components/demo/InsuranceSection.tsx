@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import Image from "next/image";
 
 export function InsuranceSection() {
   const [activeTab, setActiveTab] = useState<string>("dashboard");
@@ -29,26 +30,22 @@ export function InsuranceSection() {
           <Card>
             <CardHeader>
               <CardTitle>Dashboard Overview</CardTitle>
-              <CardDescription>Static demo metrics and status</CardDescription>
+              <CardDescription>High‑level metrics and shortcuts</CardDescription>
             </CardHeader>
-            <CardContent className="text-sm text-muted-foreground space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="rounded-md border border-border p-3">
-                  <div className="text-xs text-muted-foreground">Open Claims</div>
-                  <div className="text-xl font-semibold">24</div>
-                </div>
-                <div className="rounded-md border border-border p-3">
-                  <div className="text-xs text-muted-foreground">Awaiting AI Review</div>
-                  <div className="text-xl font-semibold">9</div>
-                </div>
-                <div className="rounded-md border border-border p-3">
-                  <div className="text-xs text-muted-foreground">Manual (Validators)</div>
-                  <div className="text-xl font-semibold">6</div>
-                </div>
-              </div>
-              <div className="text-xs text-muted-foreground">This is demo data for illustration.</div>
-              <div className="aspect-video w-full rounded-md border border-dashed border-border flex items-center justify-center text-xs text-muted-foreground">
-                Screenshot placeholder: Insurance dashboard
+            <CardContent className="text-sm text-muted-foreground space-y-3">
+              <p>
+                The dashboard summarizes open claims, verification workload, recent approvals/rejections, and quick links
+                to your verification tools. Most cards are informational and help you jump to actions quickly.
+              </p>
+              <div className="mt-1">
+                <Image
+                  src="/screenshots/insurance/dashboard.png"
+                  alt="Insurance – Dashboard overview"
+                  width={1919}
+                  height={859}
+                  className="w-full h-auto rounded-md border border-border bg-muted/20"
+                  sizes="(max-width: 768px) 100vw, 800px"
+                />
               </div>
             </CardContent>
           </Card>
@@ -57,28 +54,45 @@ export function InsuranceSection() {
         <TabsContent value="claims">
           <Card>
             <CardHeader>
-              <CardTitle>Claims Management</CardTitle>
+              <CardTitle>Claims</CardTitle>
+              <CardDescription>Manage active and approved claims</CardDescription>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground space-y-4">
               <div>
-                <h4 className="font-semibold">Claim Buckets</h4>
-                <ul className="list-disc ml-5 space-y-1">
-                  <li><span className="font-medium">Auto‑Approve</span>: High AI score, clean checks → instant approval & payout.</li>
-                  <li><span className="font-medium">Manual Review</span>: Medium AI score → sent to validators for consensus.</li>
-                  <li><span className="font-medium">Reject/Investigate</span>: Low AI score or anomalies → fraud workflow.</li>
-                </ul>
+                <h4 className="font-semibold text-foreground mb-1">Active Claims</h4>
+                <p>
+                  Shows all incoming claims and whether their attached reports are verified or not. Claims with
+                  platform‑issued, verified reports can be approved immediately. Unverified claims require verification
+                  through the AI and/or Validator layers.
+                </p>
+                <div className="mt-2">
+                  <Image
+                    src="/screenshots/insurance/claims-active.png"
+                    alt="Insurance – Active Claims table"
+                    width={1919}
+                    height={859}
+                    className="w-full h-auto rounded-md border border-border bg-muted/20"
+                    sizes="(max-width: 768px) 100vw, 800px"
+                  />
+                </div>
               </div>
+              <Separator />
               <div>
-                <h4 className="font-semibold">Workflow</h4>
-                <ol className="list-decimal ml-5 space-y-1">
-                  <li>Ingest reports from patients (linked to issuer on‑chain hash).</li>
-                  <li>Run AI verification → categorize into buckets.</li>
-                  <li>For manual bucket, create validator tasks with reward.</li>
-                  <li>After consensus, finalize outcome and trigger payouts.</li>
-                </ol>
-              </div>
-              <div className="aspect-video w-full rounded-md border border-dashed border-border flex items-center justify-center text-xs text-muted-foreground">
-                Screenshot placeholder: Claims list & bucket filters
+                <h4 className="font-semibold text-foreground mb-1">Approved Claims</h4>
+                <p>
+                  Once a claim is approved, it’s listed here with payout details and audit references. Claims backed by
+                  trusted platform‑issued reports typically appear here without additional steps.
+                </p>
+                <div className="mt-2">
+                  <Image
+                    src="/screenshots/insurance/claims-approved.png"
+                    alt="Insurance – Approved Claims table"
+                    width={1919}
+                    height={859}
+                    className="w-full h-auto rounded-md border border-border bg-muted/20"
+                    sizes="(max-width: 768px) 100vw, 800px"
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -87,33 +101,45 @@ export function InsuranceSection() {
         <TabsContent value="ai">
           <Card>
             <CardHeader>
-              <CardTitle>Layer 1 – AI Verification</CardTitle>
-              <CardDescription>Contract ownership and scoring</CardDescription>
+              <CardTitle>AI Verification</CardTitle>
+              <CardDescription>One‑time setup, then score unverified documents</CardDescription>
             </CardHeader>
-            <CardContent className="text-sm text-muted-foreground space-y-4">
-              <div>
-                <h4 className="font-semibold">One‑time AI Contract Setup</h4>
-                <ul className="list-disc ml-5 space-y-1">
-                  <li>Deploy insurance‑owned verification contract (Polygon Amoy 80002).</li>
-                  <li>Funding: 1 POL deposit → 0.9 POL rewards to issuer; 0.1 POL platform fee.</li>
-                  <li>Configurable thresholds: approve ≥ 80, manual 50‑79, reject &lt; 50.</li>
-                </ul>
-              </div>
-              <Separator />
-              <div>
-                <h4 className="font-semibold">AI Scoring Process</h4>
-                <ul className="list-disc ml-5 space-y-1">
-                  <li>Template matching with issuer metadata and on‑chain hash.</li>
-                  <li>Model signals: format score, text consistency, metadata, forensics.</li>
-                  <li>Aggregate AI trust score → routes to Auto / Manual / Reject buckets.</li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-semibold">Outputs</h4>
-                <ul className="list-disc ml-5 space-y-1">
-                  <li>Decision, score breakdown, and rationale.</li>
-                  <li>Audit trail with inputs and hash references.</li>
-                </ul>
+            <CardContent className="text-sm text-muted-foreground space-y-3">
+              <ol className="list-decimal ml-5 space-y-1">
+                <li>
+                  Complete a one‑time AI contract setup. This makes you the owner of your verification contract and
+                  configures fee flows.
+                </li>
+                <li>
+                  For each scoring run, 1 POL is charged: <span className="font-medium text-foreground">0.9 POL</span>
+                  goes to the report’s issuer for providing the template; <span className="font-medium text-foreground">0.1 POL</span>
+                  is the platform fee.
+                </li>
+                <li>
+                  Generate AI scores for all unverified documents. In this demo, scores are placeholder values; in
+                  production, they’re computed from issuer‑provided templates and model checks.
+                </li>
+                <li>
+                  Scores are bucketed into three outcomes based on your thresholds (set during registration):
+                  <span className="font-medium text-foreground"> Auto</span>,
+                  <span className="font-medium text-foreground"> Manual</span>, and
+                  <span className="font-medium text-foreground"> Reject</span>.
+                </li>
+              </ol>
+              <ul className="list-disc ml-5 space-y-1">
+                <li><span className="font-medium text-foreground">Auto:</span> mark report as verified automatically.</li>
+                <li><span className="font-medium text-foreground">Reject:</span> mark as rejected and move to Fraud Alerts.</li>
+                <li><span className="font-medium text-foreground">Manual:</span> send to Validator Layer for human review.</li>
+              </ul>
+              <div className="mt-2">
+                <Image
+                  src="/screenshots/insurance/ai-verification.png"
+                  alt="Insurance – AI Verification setup and scoring"
+                  width={1919}
+                  height={859}
+                  className="w-full h-auto rounded-md border border-border bg-muted/20"
+                  sizes="(max-width: 768px) 100vw, 800px"
+                />
               </div>
             </CardContent>
           </Card>
@@ -122,29 +148,23 @@ export function InsuranceSection() {
         <TabsContent value="validator">
           <Card>
             <CardHeader>
-              <CardTitle>Layer 2 – Validator Verification</CardTitle>
-              <CardDescription>Consensus & rewards</CardDescription>
+              <CardTitle>Validator Layer</CardTitle>
+              <CardDescription>Human review for uncertain claims</CardDescription>
             </CardHeader>
-            <CardContent className="text-sm text-muted-foreground space-y-4">
-              <div>
-                <h4 className="font-semibold">Validator Contract Setup</h4>
-                <ul className="list-disc ml-5 space-y-1">
-                  <li>Deploy validation contract with quorum and minimum validators.</li>
-                  <li>Set reward per task and SLA (e.g., 24h deadline).</li>
-                  <li>Distribution: 90% validators, 10% platform fee.</li>
-                </ul>
-              </div>
-              <Separator />
-              <div>
-                <h4 className="font-semibold">Queues</h4>
-                <ul className="list-disc ml-5 space-y-1">
-                  <li><span className="font-medium">Validate Documents</span>: spawn tasks for claims in Manual.</li>
-                  <li><span className="font-medium">Verification Queue</span>: track progress, votes, consensus.</li>
-                  <li>Auto‑payout on success; re‑queue or reject on failure.</li>
-                </ul>
-              </div>
-              <div className="aspect-video w-full rounded-md border border-dashed border-border flex items-center justify-center text-xs text-muted-foreground">
-                Screenshot placeholder: Validator queue
+            <CardContent className="text-sm text-muted-foreground space-y-3">
+              <p>
+                Claims that require human review are sent to the Validator Layer. Validators review the claim and attached
+                report, then vote on the outcome.
+              </p>
+              <div className="mt-2">
+                <Image
+                  src="/screenshots/insurance/validator-layer.png"
+                  alt="Insurance – Validator Layer"
+                  width={1919}
+                  height={859}
+                  className="w-full h-auto rounded-md border border-border bg-muted/20"
+                  sizes="(max-width: 768px) 100vw, 800px"
+                />
               </div>
             </CardContent>
           </Card>
@@ -153,22 +173,23 @@ export function InsuranceSection() {
         <TabsContent value="fraud">
           <Card>
             <CardHeader>
-              <CardTitle>Fraud Detection</CardTitle>
+              <CardTitle>Fraud Alerts</CardTitle>
+              <CardDescription>Monitor and investigate suspicious activity</CardDescription>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground space-y-3">
-              <div>
-                <h4 className="font-semibold">Signals</h4>
-                <ul className="list-disc ml-5 space-y-1">
-                  <li>Low AI score, metadata tampering, copy‑move artifacts.</li>
-                  <li>Issuer mismatch vs on‑chain hash or template violations.</li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-semibold">Actions</h4>
-                <ul className="list-disc ml-5 space-y-1">
-                  <li>Flag and notify compliance team.</li>
-                  <li>Collect evidence snapshot and generate report.</li>
-                </ul>
+              <p>
+                Claims that are flagged as suspicious or have a low AI score are moved to the Fraud Alerts section.
+                Investigators can review the claim and attached report, then take action to resolve the issue.
+              </p>
+              <div className="mt-2">
+                <Image
+                  src="/screenshots/insurance/fraud-alerts.png"
+                  alt="Insurance – Fraud Alerts"
+                  width={1919}
+                  height={859}
+                  className="w-full h-auto rounded-md border border-border bg-muted/20"
+                  sizes="(max-width: 768px) 100vw, 800px"
+                />
               </div>
             </CardContent>
           </Card>
@@ -180,7 +201,8 @@ export function InsuranceSection() {
               <CardTitle>Future Enhancements</CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground">
-              Analytics with fraud patterns, RBAC, external API integration, compliance reporting, ROI tracking.
+              Analytics, policy management, pricing rules, advanced fraud analytics and dispute workflows can be added
+              next based on operational needs.
             </CardContent>
           </Card>
         </TabsContent>
