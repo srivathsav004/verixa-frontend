@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import Image from "next/image";
 
 export function IssuerSection() {
   const [activeTab, setActiveTab] = useState<string>("overview");
@@ -35,8 +36,19 @@ export function IssuerSection() {
                 <li><strong>Single‑use validity:</strong> once a report is used successfully in a claim, it becomes locked and cannot be reused for another claim.</li>
                 <li>Issuer actions are performed from the dashboard’s “Issue Reports” view.</li>
               </ul>
-              <div className="mt-3 rounded-md border border-dashed border-border p-4 text-xs">
-                Screenshot placeholder: Issuer Dashboard overview and quick stats
+              <div className="mt-3">
+                <Image
+                  src="/screenshots/issuer/dashboard-overview.png"
+                  alt="Issuer Dashboard overview and quick stats"
+                  width={1919}
+                  height={859}
+                  className="w-full h-auto rounded-md border border-border bg-muted/20"
+                  sizes="(max-width: 768px) 100vw, 800px"
+                  priority
+                />
+                <div className="mt-2 text-[11px] text-muted-foreground">
+                  Place your screenshot at <code className="font-mono">public/screenshots/issuer/dashboard-overview.png</code>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -99,8 +111,18 @@ export function IssuerSection() {
                 <li><strong>Single‑use lock:</strong> after a successful claim, the report is marked used/locked and cannot be reused for another claim.</li>
                 <li>Issuer can review past issuances in <span className="font-medium text-foreground">ReportsHistory</span>.</li>
               </ol>
-              <div className="mt-3 rounded-md border border-dashed border-border p-4 text-xs">
-                Screenshot placeholder: Issue New Document → select patient → upload PDF → Issue
+              <div className="mt-3">
+                <Image
+                  src="/screenshots/issuer/issue-report-flow.png"
+                  alt="Issue New Document — select patient, upload PDF, issue"
+                  width={1919}
+                  height={859}
+                  className="w-full h-auto rounded-md border border-border bg-muted/20"
+                  sizes="(max-width: 768px) 100vw, 800px"
+                />
+                <div className="mt-2 text-[11px] text-muted-foreground">
+                  Place your screenshot at <code className="font-mono">public/screenshots/issuer/issue-report-flow.png</code>
+                </div>
               </div>
             </CardContent>
           </Card>
