@@ -95,6 +95,11 @@ export function DemoSidebar() {
             <SidebarMenu className="gap-0.5">
               <SidebarMenuItem>
                 <SidebarMenuButton asChild className="text-sm">
+                  <a href="#registration-login" className="hover:underline">Registration & Login</a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild className="text-sm">
                   <a href="#getting-started" className="hover:underline">Setup Guide</a>
                 </SidebarMenuButton>
               </SidebarMenuItem>

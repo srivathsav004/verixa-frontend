@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 
 export function PatientSection() {
+  const [activeTab, setActiveTab] = useState<string>("reports");
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2">
@@ -15,7 +16,7 @@ export function PatientSection() {
         <Badge variant="outline">Claims & Records</Badge>
       </div>
 
-      <Tabs defaultValue="reports">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="reports">Medical Reports</TabsTrigger>
           <TabsTrigger value="submit">Submit Claims</TabsTrigger>
