@@ -5,11 +5,39 @@ import { Button } from "@/components/ui/button"
 import { BackgroundBeams } from "./background-beams"
 import { HoverBorderGradient } from "./hover-border-gradient"
 import Link from "next/link"
+import Logo from "@/components/common/Logo"
 
 export function HeroSection() {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       <BackgroundBeams />
+
+      {/* Top navigation with glass effect */}
+      <div className="pointer-events-none absolute top-0 left-0 right-0 z-20">
+        <div className="mx-auto max-w-6xl px-4 py-4">
+          <div className="pointer-events-auto flex items-center justify-between rounded-xl border border-white/10 bg-black/20 backdrop-blur supports-[backdrop-filter]:bg-black/10 px-4 py-2">
+            <div className="flex items-center gap-2">
+              <Logo size={22} className="text-white/90" />
+              <span className="text-sm font-semibold tracking-wide text-white/80">Verixa</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Link href="/login">
+                <Button
+                  variant="ghost"
+                  className="h-9 px-4 text-sm text-white/90 hover:text-white/100 hover:bg-white/10 border border-white/10"
+                >
+                  Log In
+                </Button>
+              </Link>
+              <Link href="/role-selection">
+                <Button className="h-9 px-4 text-sm font-semibold bg-white text-black hover:bg-gray-200">
+                  Get Started
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div className="relative z-10 text-center max-w-4xl mx-auto px-6">
         <motion.h1
