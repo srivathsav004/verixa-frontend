@@ -91,12 +91,22 @@ export default function AvailableQueue() {
     if (!insuranceId) return;
     setLoading(true);
     try {
+      // Cross-site cookie fallback: include validator_user_id if available
+      const getCookie = (name: string) =>
+        typeof document === "undefined"
+          ? ""
+          : (document.cookie.split("; ").find((row) => row.startsWith(name + "="))?.split("=")[1] || "");
+      const uidFromCookie = getCookie("user_id") || getCookie("validator_user_id");
+      const uidFromStorage = typeof window !== "undefined" ? (localStorage.getItem("user_id") || localStorage.getItem("validator_user_id") || "") : "";
+      const validatorId = uidFromCookie || uidFromStorage || "";
+
       const qs = new URLSearchParams({
         insurance_id: insuranceId,
         page: String(page),
         page_size: String(pageSize),
       });
       if (search.trim()) qs.set("search", search.trim());
+      if (validatorId) qs.set("validator_user_id", validatorId);
       const resp = await fetch(`${api}/verification-queue?${qs.toString()}`, { credentials: 'include' });
       if (!resp.ok) throw new Error(`fetch queue failed ${resp.status}`);
       const j = await resp.json();
