@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { config } from "@/lib/config";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 type CompletedItem = {
   task_id: number;
@@ -65,7 +66,10 @@ export default function CompletedHistory() {
   // Submissions cache and UI expand state
   const [subsByTask, setSubsByTask] = useState<Record<number, SubmissionItem[]>>({});
   const [subsLoading, setSubsLoading] = useState<Record<number, boolean>>({});
-  const [expanded, setExpanded] = useState<Record<number, boolean>>({});
+
+  // Dialog state for responses preview
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalTaskId, setModalTaskId] = useState<number | null>(null);
 
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
 
@@ -115,11 +119,6 @@ export default function CompletedHistory() {
       const visibleTaskIds = new Set(rows.map(r => r.task_id));
       setSubsByTask(prev => {
         const next: Record<number, SubmissionItem[]> = {};
-        Object.keys(prev).forEach(k => { const id = Number(k); if (visibleTaskIds.has(id)) next[id] = prev[id]; });
-        return next;
-      });
-      setExpanded(prev => {
-        const next: Record<number, boolean> = {};
         Object.keys(prev).forEach(k => { const id = Number(k); if (visibleTaskIds.has(id)) next[id] = prev[id]; });
         return next;
       });
@@ -189,10 +188,10 @@ export default function CompletedHistory() {
     }
   };
 
-  const togglePreview = async (taskId: number) => {
-    // Load once on first expand
-    if (!expanded[taskId]) await fetchSubmissions(taskId);
-    setExpanded(prev => ({ ...prev, [taskId]: !prev[taskId] }));
+  const openResponses = async (taskId: number) => {
+    await fetchSubmissions(taskId);
+    setModalTaskId(taskId);
+    setModalOpen(true);
   };
 
   return (
@@ -230,9 +229,9 @@ export default function CompletedHistory() {
                 <tr>
                   <th className="p-2 text-left">S.No.</th>
                   <th className="p-2 text-left">Company</th>
-                  <th className="p-2 text-left">Claim ID</th>
+                  {/* <th className="p-2 text-left">Claim ID</th> */}
                   <th className="p-2 text-left">Report URL</th>
-                  <th className="p-2 text-left">Task ID</th>
+                  {/* <th className="p-2 text-left">Task ID</th> */}
                   <th className="p-2 text-left">Required</th>
                   <th className="p-2 text-left">Reward (POL, 90% net)</th>
                   <th className="p-2 text-left">Task Created</th>
@@ -255,9 +254,9 @@ export default function CompletedHistory() {
                     <tr key={`row-${r.task_id}-${idx}`} className={`${idx % 2 ? "bg-foreground/5/20" : ""} hover:bg-foreground/5`}>
                       <td className="p-2 align-top">{(page - 1) * pageSize + idx + 1}</td>
                       <td className="p-2 align-top">{r.company_name || '-'}</td>
-                      <td className="p-2 align-top">{r.claim_id}</td>
+                      {/* <td className="p-2 align-top">{r.claim_id}</td> */}
                       <td className="p-2 align-top">{r.report_url ? (<a href={r.report_url} target="_blank" className="text-primary underline">Open</a>) : '-'}</td>
-                      <td className="p-2 align-top">{r.task_id}</td>
+                      {/* <td className="p-2 align-top">{r.task_id}</td> */}
                       <td className="p-2 align-top">{r.required_validators ?? '-'}</td>
                       <td className="p-2 align-top">{formatReward(r.reward_pol)}</td>
                       <td className="p-2 align-top whitespace-nowrap">{new Date(r.created_at).toLocaleString("en-US")}</td>
@@ -272,52 +271,13 @@ export default function CompletedHistory() {
                         <button
                           className="text-primary underline disabled:opacity-50"
                           disabled={!!subsLoading[r.task_id]}
-                          onClick={(e) => { e.preventDefault(); togglePreview(r.task_id); }}
+                          onClick={(e) => { e.preventDefault(); openResponses(r.task_id); }}
                         >
-                          {expanded[r.task_id] ? 'Hide' : (subsByTask[r.task_id]?.length === 1 ? 'Open response' : 'Preview responses')}
+                          {subsByTask[r.task_id]?.length === 1 ? 'Open response' : 'Preview responses'}
                         </button>
                       </td>
                       <td className="p-2 align-top"><span className="px-2 py-1 rounded-md border border-border text-xs">{r.status}</span></td>
                     </tr>
-                    {expanded[r.task_id] && (
-                      <tr key={`exp-${r.task_id}-${idx}`} className={`${idx % 2 ? "bg-foreground/5/20" : ""}`}>
-                        <td className="p-2" colSpan={13}>
-                          {subsLoading[r.task_id] && <div className="text-sm">Loading responses...</div>}
-                          {!subsLoading[r.task_id] && (subsByTask[r.task_id]?.length || 0) === 0 && (
-                            <div className="text-sm text-muted-foreground">No submissions found.</div>
-                          )}
-                          {!subsLoading[r.task_id] && (subsByTask[r.task_id]?.length || 0) === 1 && (
-                            <div className="text-sm">
-                              {(() => { const s = subsByTask[r.task_id][0]; return (
-                                <>
-                                  <div className="flex flex-wrap gap-3 items-center">
-                                    <span className="text-xs rounded-md border border-border px-2 py-0.5">Validator: {s.wallet_address ? short(s.wallet_address) : `#${s.validator_user_id}`}</span>
-                                    <span className="text-xs text-muted-foreground">{new Date(s.created_at as any).toLocaleString("en-US")}</span>
-                                    <a href={cidToUrl(s.result_cid)} target="_blank" className="text-primary underline">Open submitted report</a>
-                                    {s.tx_hash && <a className="text-primary underline" href={`https://amoy.polygonscan.com/tx/${s.tx_hash}`} target="_blank">Tx {short(s.tx_hash)}</a>}
-                                  </div>
-                                </>
-                              ); })()}
-                            </div>
-                          )}
-                          {!subsLoading[r.task_id] && (subsByTask[r.task_id]?.length || 0) > 1 && (
-                            <div className="text-sm">
-                              <div className="mb-2 text-xs text-muted-foreground">{subsByTask[r.task_id].length} submissions</div>
-                              <ul className="space-y-2">
-                                {subsByTask[r.task_id].map((s, i) => (
-                                  <li key={`${s.id}-${i}`} className="flex flex-wrap items-center gap-3">
-                                    <span className="text-xs rounded-md border border-border px-2 py-0.5">Validator: {s.wallet_address ? short(s.wallet_address) : `#${s.validator_user_id}`}</span>
-                                    <span className="text-xs text-muted-foreground">{new Date(s.created_at as any).toLocaleString("en-US")}</span>
-                                    <a href={cidToUrl(s.result_cid)} target="_blank" className="text-primary underline">Open</a>
-                                    {s.tx_hash && <a className="text-primary underline" href={`https://amoy.polygonscan.com/tx/${s.tx_hash}`} target="_blank">Tx {short(s.tx_hash)}</a>}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    )}
                   </Fragment>
                 ))}
               </tbody>
@@ -347,6 +307,53 @@ export default function CompletedHistory() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Responses Modal */}
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Submission responses</DialogTitle>
+            <DialogDescription>Review all validator submissions for this task.</DialogDescription>
+          </DialogHeader>
+          {(() => {
+            const taskId = modalTaskId ?? 0;
+            const subs = taskId ? (subsByTask[taskId] || []) : [];
+            const isLoading = !!(taskId && subsLoading[taskId]);
+            const ctx = items.find(it => it.task_id === taskId);
+            return (
+              <div className="space-y-3">
+                {ctx && (
+                  <div className="text-xs text-muted-foreground flex flex-wrap gap-3">
+                    <span className="rounded-md border border-border px-2 py-0.5">Task #{ctx.task_id}</span>
+                    <span className="rounded-md border border-border px-2 py-0.5">Claim #{ctx.claim_id}</span>
+                    {ctx.company_name && <span className="rounded-md border border-border px-2 py-0.5">{ctx.company_name}</span>}
+                  </div>
+                )}
+                {isLoading && <div className="text-sm">Loading responses...</div>}
+                {!isLoading && subs.length === 0 && (
+                  <div className="text-sm text-muted-foreground">No submissions found.</div>
+                )}
+                {!isLoading && subs.length > 0 && (
+                  <ul className="divide-y divide-border rounded-md border border-border">
+                    {subs.map((s) => (
+                      <li key={s.id} className="p-3 flex flex-wrap items-center gap-3">
+                        <span className="text-xs rounded-md border border-border px-2 py-0.5">
+                          Validator: {s.wallet_address ? short(s.wallet_address) : `#${s.validator_user_id}`}
+                        </span>
+                        <span className="text-xs text-muted-foreground">{new Date(s.created_at as any).toLocaleString("en-US")}</span>
+                        <a href={cidToUrl(s.result_cid)} target="_blank" className="text-primary underline">Open report</a>
+                        {s.tx_hash && (
+                          <a className="text-primary underline" href={`https://amoy.polygonscan.com/tx/${s.tx_hash}`} target="_blank">Tx {short(s.tx_hash)}</a>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -130,9 +130,9 @@ export default function ActiveValidations() {
                 <tr>
                   <th className="p-2 text-left">S.No.</th>
                   <th className="p-2 text-left">Company</th>
-                  <th className="p-2 text-left">Claim ID</th>
+                  {/* <th className="p-2 text-left">Claim ID</th> */}
                   <th className="p-2 text-left">Report URL</th>
-                  <th className="p-2 text-left">Task ID</th>
+                  {/* <th className="p-2 text-left">Task ID</th> */}
                   <th className="p-2 text-left">Progress</th>
                   <th className="p-2 text-left">Reward (POL, 90% net)</th>
                   <th className="p-2 text-left">Created</th>
@@ -149,9 +149,9 @@ export default function ActiveValidations() {
                   <tr key={r.task_id} className={`${idx % 2 ? "bg-foreground/5/20" : ""} hover:bg-foreground/5`}>
                     <td className="p-2 align-top">{(page - 1) * pageSize + idx + 1}</td>
                     <td className="p-2 align-top">{r.company_name || '-'}</td>
-                    <td className="p-2 align-top">{r.claim_id ?? '-'}</td>
+                    {/* <td className="p-2 align-top">{r.claim_id ?? '-'}</td> */}
                     <td className="p-2 align-top">{r.report_url ? (<a href={r.report_url} target="_blank" className="text-primary underline">Open</a>) : '-'}</td>
-                    <td className="p-2 align-top">{r.task_id}</td>
+                    {/* <td className="p-2 align-top">{r.task_id}</td> */}
                     <td className="p-2 align-top">{r.current_submissions}/{r.required_validators}</td>
                     <td className="p-2 align-top">{formatRewardNet(r.reward_pol)}</td>
                     <td className="p-2 align-top whitespace-nowrap">{new Date(r.created_at).toLocaleString("en-US")}</td>
