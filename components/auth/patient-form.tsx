@@ -834,7 +834,8 @@ export function PatientForm() {
               accept=".pdf,.jpg,.jpeg,.png"
               value={formData.idDocument}
               onChange={(file) => updateFormData("idDocument", file)}
-              description="PDF, JPG, PNG up to 5MB"
+              maxSize={1}
+              description="PDF, JPG, PNG up to 1MB"
             />
             {errors.idDocument && (
               <p className="text-red-400 text-sm flex items-center gap-1">
