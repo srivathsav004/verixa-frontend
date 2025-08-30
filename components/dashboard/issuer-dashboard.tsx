@@ -24,6 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
+import Logo from "@/components/common/Logo";
 // import { Separator } from "@/components/ui/separator";
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Line, LineChart, XAxis, YAxis } from "recharts";
@@ -123,7 +124,7 @@ export function IssuerDashboard() {
           <Sidebar className="border-r border-border">
             <SidebarHeader>
               <div className="flex items-center gap-3 px-2 py-1.5">
-                <div className="h-8 w-8 rounded-md bg-foreground/5 grid place-items-center font-bold">V</div>
+                <Logo size={32} />
                 <div className="leading-tight">
                   <div className="font-semibold">Verixa</div>
                   <div className="text-xs text-muted-foreground">Medical Issuer</div>

@@ -26,6 +26,7 @@ import { InsuranceSection } from "@/components/demo/InsuranceSection";
 import { ValidatorSection } from "@/components/demo/ValidatorSection";
 import { TechnicalSection } from "@/components/demo/TechnicalSection";
 import { GettingStartedSection } from "@/components/demo/GettingStartedSection";
+import { RegistrationLoginSection } from "@/components/demo/RegistrationLoginSection";
 
 export default function DemoPage() {
   return (
@@ -88,6 +89,11 @@ export default function DemoPage() {
 
             <section id="technical" className="scroll-mt-24">
               <TechnicalSection />
+            </section>
+            <Separator />
+
+            <section id="registration-login" className="scroll-mt-24">
+              <RegistrationLoginSection />
             </section>
             <Separator />
 
