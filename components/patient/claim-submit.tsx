@@ -525,8 +525,8 @@ export default function ClaimSubmit({ patientId }: { patientId: number }) {
                         setSelectedIssuedDocId("");
                       }
                     }}
-                    maxSize={10}
-                    description="PDF or Image up to 10MB"
+                    maxSize={1}
+                    description="PDF or Image up to 1MB"
                     disabled={submitting}
                   />
                   {/* Issuer selection for unverified report */}
@@ -569,8 +569,8 @@ export default function ClaimSubmit({ patientId }: { patientId: number }) {
                         setSelectedIssuedDocId("");
                       }
                     }}
-                    maxSize={10}
-                    description="PDF or Image up to 10MB"
+                    maxSize={1}
+                    description="PDF or Image up to 1MB"
                     disabled={submitting}
                   />
                   {needIssuerSelection && (
@@ -613,8 +613,8 @@ export default function ClaimSubmit({ patientId }: { patientId: number }) {
                     setSelectedIssuedDocId("");
                   }
                 }}
-                maxSize={10}
-                description="PDF or Image up to 10MB"
+                maxSize={1}
+                description="PDF or Image up to 1MB"
                 disabled={submitting}
               />
               {/* Issuer selection for unverified report when no issued docs exist */}

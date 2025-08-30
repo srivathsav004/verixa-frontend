@@ -331,7 +331,8 @@ export default function IssueNewDocument() {
                       required
                       value={file}
                       onChange={(f) => setFile((Array.isArray(f) ? f[0] : f) || null)}
-                      description="Only PDF up to 5MB"
+                      maxSize={1}
+                      description="Only PDF up to 1MB"
                     />
                   </div>
                   <div className="flex items-center gap-2 pt-1">
