@@ -225,7 +225,8 @@ export function ValidatorForm() {
           accept=".pdf,.jpg,.jpeg,.png"
           value={formData.professional_license_certificate}
           onChange={(file) => update("professional_license_certificate", file)}
-          description="PDF, JPG, PNG up to 5MB"
+          maxSize={1}
+          description="PDF, JPG, PNG up to 1MB"
         />
         <FileUpload
           id="institution_id_letter"
@@ -234,7 +235,8 @@ export function ValidatorForm() {
           accept=".pdf,.jpg,.jpeg,.png"
           value={formData.institution_id_letter}
           onChange={(file) => update("institution_id_letter", file)}
-          description="PDF, JPG, PNG up to 5MB"
+          maxSize={1}
+          description="PDF, JPG, PNG up to 1MB"
         />
         <FileUpload
           id="educational_qualification_certificate"
@@ -243,7 +245,8 @@ export function ValidatorForm() {
           accept=".pdf,.jpg,.jpeg,.png"
           value={formData.educational_qualification_certificate}
           onChange={(file) => update("educational_qualification_certificate", file)}
-          description="PDF, JPG, PNG up to 5MB"
+          maxSize={1}
+          description="PDF, JPG, PNG up to 1MB"
         />
       </div>
     </div>
