@@ -53,24 +53,26 @@ export function HeroSection() {
             </HoverBorderGradient>
           </Link>
 
-          <Button
-            size="lg"
-            className="
-              relative 
-              border border-gray-600 
-              text-white 
-              bg-transparent 
-              px-8 py-4 text-lg font-semibold 
-              rounded-xl
-              transition-all duration-300 ease-in-out 
-              hover:border-white 
-              hover:bg-white/10 
-              hover:shadow-lg 
-              hover:shadow-white/10
-            "
-          >
-            Request Demo
-          </Button>
+          <Link href="/demo">
+            <Button
+              size="lg"
+              className="
+                relative 
+                border border-gray-600 
+                text-white 
+                bg-transparent 
+                px-8 py-4 text-lg font-semibold 
+                rounded-xl
+                transition-all duration-300 ease-in-out 
+                hover:border-white 
+                hover:bg-white/10 
+                hover:shadow-lg 
+                hover:shadow-white/10
+              "
+            >
+              Request Demo
+            </Button>
+          </Link>
         </motion.div>
       </div>
     </section>
