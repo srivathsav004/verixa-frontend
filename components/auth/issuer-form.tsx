@@ -479,212 +479,13 @@ export function IssuerForm() {
           accept="image/*"
           value={formData.organizationLogo}
           onChange={(file) => updateFormData("organizationLogo", file)}
-          description="PNG, JPG up to 5MB"
+          maxSize={1}
+          description="PNG, JPG up to 1MB"
         />
+
       </div>
 
       {/* Contact Information Section */}
-      <div className="space-y-8">
-        <div className="flex items-center space-x-3 pb-4 border-b border-gray-700">
-          <User className="h-5 w-5 text-blue-400" />
-          <h3 className="text-xl font-semibold text-gray-100">Contact Information</h3>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="space-y-2">
-            <Label htmlFor="contactPersonName" className="text-gray-200">Primary Contact Person Name *</Label>
-            <Input
-              id="contactPersonName"
-              value={formData.contactPersonName}
-              onChange={(e) => updateFormData("contactPersonName", e.target.value)}
-              placeholder="e.g., Dr. John Smith"
-              className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100 placeholder:text-gray-400"
-            />
-            {errors.contactPersonName && (
-              <p className="text-red-400 text-sm flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" />
-                {errors.contactPersonName}
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="designation" className="text-gray-200">Designation *</Label>
-            <Select value={formData.designation} onValueChange={(value) => updateFormData("designation", value)}>
-              <SelectTrigger className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100">
-                <SelectValue placeholder="Select designation" />
-              </SelectTrigger>
-              <SelectContent className="bg-gray-800 border-gray-700">
-                {designations.map(designation => (
-                  <SelectItem key={designation} value={designation} className="text-gray-100 hover:bg-gray-700">{designation}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.designation && (
-              <p className="text-red-400 text-sm flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" />
-                {errors.designation}
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="emailAddress" className="text-gray-200">Email Address *</Label>
-            <Input
-              id="emailAddress"
-              type="email"
-              value={formData.emailAddress}
-              onChange={(e) => updateFormData("emailAddress", e.target.value)}
-              placeholder="contact@organization.com"
-              className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100 placeholder:text-gray-400"
-            />
-            {errors.emailAddress && (
-              <p className="text-red-400 text-sm flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" />
-                {errors.emailAddress}
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="phoneNumber" className="text-gray-200">Phone Number *</Label>
-            <Input
-              id="phoneNumber"
-              type="tel"
-              value={formData.phoneNumber}
-              onChange={(e) => updateFormData("phoneNumber", e.target.value)}
-              placeholder="+1234567890"
-              className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100 placeholder:text-gray-400"
-            />
-            {errors.phoneNumber && (
-              <p className="text-red-400 text-sm flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" />
-                {errors.phoneNumber}
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="alternativePhone" className="text-gray-200">Alternative Phone Number</Label>
-            <Input
-              id="alternativePhone"
-              type="tel"
-              value={formData.alternativePhone}
-              onChange={(e) => updateFormData("alternativePhone", e.target.value)}
-              placeholder="+1234567890"
-              className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100 placeholder:text-gray-400"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Address Details Section */}
-      <div className="space-y-8">
-        <div className="flex items-center space-x-3 pb-4 border-b border-gray-700">
-          <MapPin className="h-5 w-5 text-blue-400" />
-          <h3 className="text-xl font-semibold text-gray-100">Address Details</h3>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="md:col-span-2 space-y-2">
-            <Label htmlFor="streetAddress" className="text-gray-200">Street Address *</Label>
-            <Input
-              id="streetAddress"
-              value={formData.streetAddress}
-              onChange={(e) => updateFormData("streetAddress", e.target.value)}
-              placeholder="123 Medical Center Drive"
-              className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100 placeholder:text-gray-400"
-            />
-            {errors.streetAddress && (
-              <p className="text-red-400 text-sm flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" />
-                {errors.streetAddress}
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="city" className="text-gray-200">City *</Label>
-            <Input
-              id="city"
-              value={formData.city}
-              onChange={(e) => updateFormData("city", e.target.value)}
-              placeholder="New York"
-              className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100 placeholder:text-gray-400"
-            />
-            {errors.city && (
-              <p className="text-red-400 text-sm flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" />
-                {errors.city}
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="state" className="text-gray-200">State/Province *</Label>
-            <Input
-              id="state"
-              value={formData.state}
-              onChange={(e) => updateFormData("state", e.target.value)}
-              placeholder="NY"
-              className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100 placeholder:text-gray-400"
-            />
-            {errors.state && (
-              <p className="text-red-400 text-sm flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" />
-                {errors.state}
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="postalCode" className="text-gray-200">Postal Code *</Label>
-            <Input
-              id="postalCode"
-              value={formData.postalCode}
-              onChange={(e) => updateFormData("postalCode", e.target.value)}
-              placeholder="10001"
-              className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100 placeholder:text-gray-400"
-            />
-            {errors.postalCode && (
-              <p className="text-red-400 text-sm flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" />
-                {errors.postalCode}
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="country" className="text-gray-200">Country *</Label>
-            <Input
-              id="country"
-              value={formData.country}
-              onChange={(e) => updateFormData("country", e.target.value)}
-              placeholder="United States"
-              className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100 placeholder:text-gray-400"
-            />
-            {errors.country && (
-              <p className="text-red-400 text-sm flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" />
-                {errors.country}
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="landmark" className="text-gray-200">Landmark (Optional)</Label>
-            <Input
-              id="landmark"
-              value={formData.landmark}
-              onChange={(e) => updateFormData("landmark", e.target.value)}
-              placeholder="Near Central Park"
-              className="bg-gray-800/50 border-gray-600 focus:border-blue-400 text-gray-100 placeholder:text-gray-400"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Verification Documents Section */}
       <div className="space-y-8">
         <div className="flex items-center space-x-3 pb-4 border-b border-gray-700">
           <FileText className="h-5 w-5 text-blue-400" />
@@ -699,7 +500,8 @@ export function IssuerForm() {
             accept=".pdf,.jpg,.jpeg,.png"
             value={formData.medicalLicense}
             onChange={(file) => updateFormData("medicalLicense", file)}
-            description="PDF, JPG, PNG up to 5MB"
+            maxSize={1}
+            description="PDF, JPG, PNG up to 1MB"
           />
           <FileUpload
             id="businessRegistration"
@@ -708,7 +510,8 @@ export function IssuerForm() {
             accept=".pdf,.jpg,.jpeg,.png"
             value={formData.businessRegistration}
             onChange={(file) => updateFormData("businessRegistration", file)}
-            description="PDF, JPG, PNG up to 5MB"
+            maxSize={1}
+            description="PDF, JPG, PNG up to 1MB"
           />
           <FileUpload
             id="taxRegistration"
@@ -717,7 +520,8 @@ export function IssuerForm() {
             accept=".pdf,.jpg,.jpeg,.png"
             value={formData.taxRegistration}
             onChange={(file) => updateFormData("taxRegistration", file)}
-            description="PDF, JPG, PNG up to 5MB"
+            maxSize={1}
+            description="PDF, JPG, PNG up to 1MB"
           />
           <FileUpload
             id="accreditationCertificates"
@@ -726,9 +530,11 @@ export function IssuerForm() {
             accept=".pdf,.jpg,.jpeg,.png"
             value={formData.accreditationCertificates}
             onChange={(file) => updateFormData("accreditationCertificates", file)}
-            description="PDF, JPG, PNG up to 5MB"
+            maxSize={1}
+            description="PDF, JPG, PNG up to 1MB"
           />
         </div>
+
       </div>
 
       {/* Account Security Section */}
