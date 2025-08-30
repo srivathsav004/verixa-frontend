@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { config } from "@/lib/config";
+import { formatISTDate } from "@/lib/date";
 import { toast } from "@/hooks/use-toast";
 import { FileUpload } from "@/components/ui/file-upload";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -484,7 +485,7 @@ export default function ClaimSubmit({ patientId }: { patientId: number }) {
                         <div className="flex-1 min-w-0">
                           <div className="font-medium truncate">{d.report_type}</div>
                           <div className="text-xs text-muted-foreground">
-                            {new Date(d.created_at).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" })}
+                            {formatISTDate(d.created_at)}
                           </div>
                         </div>
                         <span className={`text-[10px] rounded px-1.5 py-0.5 whitespace-nowrap ${

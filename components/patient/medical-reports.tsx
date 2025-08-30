@@ -16,6 +16,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { config } from "@/lib/config";
+import { formatIST } from "@/lib/date";
 
 export type IssuedDoc = {
   id: number;
@@ -186,7 +187,7 @@ export default function MedicalReports({ patientId }: { patientId: number }) {
                     <a href={d.document_url} target="_blank" className="text-primary underline">Open</a>
                   </TableCell>
                   <TableCell>{d.issuer_id ? (issuerMap[d.issuer_id] || `#${d.issuer_id}`) : "—"}</TableCell>
-                  <TableCell className="whitespace-nowrap">{new Date(d.created_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</TableCell>
+                  <TableCell className="whitespace-nowrap">{formatIST(d.created_at)}</TableCell>
                   <TableCell className={d.is_active ? "text-green-600" : "text-muted-foreground"}>
                     {d.is_active ? "Active" : "Used/Locked"}
                   </TableCell>

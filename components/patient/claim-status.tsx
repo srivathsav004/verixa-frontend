@@ -96,8 +96,17 @@ export default function ClaimStatus({ patientId }: { patientId: number }) {
     }
   };
 
-  const prettyDate = (iso: string) => {
-    try { return new Date(iso).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }); } catch { return iso; }
+  // Format timestamp to IST; treat naive timestamps as UTC
+  const prettyDate = (ts: string) => {
+    try {
+      const s = String(ts).trim();
+      const hasTZ = /([zZ]|[+-]\d{2}:?\d{2})$/.test(s);
+      const isoLike = s.includes("T") ? s : s.replace(" ", "T");
+      const date = new Date(hasTZ ? isoLike : isoLike + "Z");
+      return date.toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+    } catch {
+      return String(ts);
+    }
   };
 
   const statusVariant = (s: string): "default" | "secondary" | "destructive" | "outline" => {
