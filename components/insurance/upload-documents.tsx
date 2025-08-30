@@ -368,6 +368,7 @@ export default function UploadDocuments({ insuranceId }: UploadDocumentsProps) {
     }
 
     // 1) Enforce payment to issuers via AI contract (batch)
+    setLoadingWeb3(true);
     try {
       // Build issuer wallets, userIds and pre-check payment existence
       const issuerUsers: Record<number, { user_id: number; wallet: string }> = {};
@@ -470,6 +471,7 @@ export default function UploadDocuments({ insuranceId }: UploadDocumentsProps) {
     } catch (e: any) {
       console.error("payment step failed", e);
       toast({ title: "Payment required", description: e?.message || "On-chain payment failed.", variant: "destructive" });
+      setLoadingWeb3(false);
       return;
     }
 
@@ -500,6 +502,8 @@ export default function UploadDocuments({ insuranceId }: UploadDocumentsProps) {
       console.error(e);
       toast({ title: "Save failed", description: "Scores generated locally but not saved.", variant: "destructive" });
     }
+    // Clear wallet loading spinner once all steps are finished
+    setLoadingWeb3(false);
   };
 
   // bucket defined above as a function declaration
@@ -635,7 +639,7 @@ const applyBucketAction = async () => {
 
   return (
     <div className="max-w-full">
-      <Card className="border-border">
+      <Card className="border-border relative">
         <CardHeader className="pb-3">
           <CardTitle>Upload & Verify External Claims</CardTitle>
           <CardDescription>
@@ -643,6 +647,14 @@ const applyBucketAction = async () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {loadingWeb3 && (
+            <div className="absolute inset-0 z-50 bg-background/60 backdrop-blur-sm flex items-center justify-center">
+              <div className="flex flex-col items-center gap-2">
+                <div className="h-10 w-10 rounded-full border-2 border-foreground/20 border-t-foreground animate-spin" />
+                <div className="text-sm text-muted-foreground">Waiting for wallet…</div>
+              </div>
+            </div>
+          )}
           <div className="flex flex-wrap items-center gap-3">
             <div className="text-sm text-muted-foreground">
               Showing {start}-{end} of {total}
