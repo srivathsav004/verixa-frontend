@@ -169,20 +169,16 @@ export function ValidatorSection() {
               <CardTitle>Future</CardTitle>
               <CardDescription>Improvements planned for validators.</CardDescription>
             </CardHeader>
-            <CardContent className="text-sm text-muted-foreground space-y-3">
-              <div>
-                Transaction history, accuracy metrics, leaderboard, reputation score, settings, training & certification.
-              </div>
-              <div className="mt-1">
-                <Image
-                  src="/screenshots/validator/future.png"
-                  alt="Preview of future validator features: metrics, leaderboard, preferences"
-                  width={1919}
-                  height={859}
-                  className="w-full h-auto rounded-md border border-border bg-muted/20"
-                  sizes="(max-width: 768px) 100vw, 800px"
-                />
-              </div>
+            <CardContent className="text-sm text-muted-foreground space-y-2">
+              <div>Planned enhancements to improve the validator experience:</div>
+              <ul className="list-disc ml-5 space-y-1">
+                <li>Comprehensive transaction and payout history with export.</li>
+                <li>Accuracy metrics and performance analytics over time.</li>
+                <li>Leaderboard showcasing top validators by accuracy and volume.</li>
+                <li>Reputation score derived from consistency, dispute outcomes, and peer agreement.</li>
+                <li>Settings: notification preferences, display density, default filters.</li>
+                <li>Training and certification modules with sample tasks and feedback.</li>
+              </ul>
             </CardContent>
           </Card>
         </TabsContent>

@@ -27,6 +27,7 @@ import { ValidatorSection } from "@/components/demo/ValidatorSection";
 import { TechnicalSection } from "@/components/demo/TechnicalSection";
 import { GettingStartedSection } from "@/components/demo/GettingStartedSection";
 import { RegistrationLoginSection } from "@/components/demo/RegistrationLoginSection";
+import { Logo } from "@/components/common/Logo";
 
 export default function DemoPage() {
   return (
@@ -41,8 +42,8 @@ export default function DemoPage() {
         <Sidebar className="border-r border-border">
           <SidebarHeader className="px-3 py-2">
             <div className="flex items-center gap-2">
-              <SidebarTrigger />
-              <h1 className="text-lg font-semibold">Verixa Demo</h1>
+              <Logo size={18} className="text-primary" />
+              <h1 className="text-lg font-semibold">Verixa Documentation</h1>
             </div>
           </SidebarHeader>
           <SidebarContent>
@@ -57,7 +58,7 @@ export default function DemoPage() {
           <header className="sticky top-0 z-10 border-b border-border bg-background/60 backdrop-blur supports-[backdrop-filter]:bg-background/40">
             <div className="flex items-center gap-3 pl-4 pr-0 py-3">
               <SidebarTrigger className="text-foreground/80" />
-              <div className="ml-1 text-sm text-muted-foreground">Demo Documentation</div>
+              <div className="ml-1 text-sm text-muted-foreground">Documentation</div>
             </div>
           </header>
 

@@ -20,13 +20,10 @@ export function RegistrationLoginSection() {
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground space-y-2">
           <ul className="list-disc ml-5 space-y-1">
-            <li>Install MetaMask (or compatible Web3 wallet).</li>
-            <li>Switch to <span className="font-medium">Polygon Amoy Testnet</span> (Chain ID: <span className="font-mono">80002</span>).</li>
-            <li>Ensure a small test balance for gas fees (insurance/validator flows may trigger on-chain txns).</li>
+            <li>MetaMask (or compatible Web3 wallet) installed.</li>
+            <li>Polygon Amoy Testnet selected (Chain ID <span className="font-mono">80002</span>).</li>
+            <li>Small test POL for gas (mainly for Insurance/Validator actions).</li>
           </ul>
-          <div className="aspect-video w-full rounded-md border border-dashed border-border flex items-center justify-center text-xs">
-            Screenshot placeholder: MetaMask network setup (Amoy 80002)
-          </div>
         </CardContent>
       </Card>
 
@@ -36,21 +33,17 @@ export function RegistrationLoginSection() {
           <CardDescription>Choose Issuer, Patient, Insurance, or Validator</CardDescription>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground space-y-3">
-          <p>
-            Start at the role selection page to pick your primary role and complete registration.
-          </p>
+          <p>Start at the Role Selection page, pick your role, and complete the role-specific form.</p>
           <div className="rounded-md border border-border p-3 bg-muted/30 text-xs">
             URL: <a href="https://verixa.vercel.app/role-selection" target="_blank" rel="noreferrer" className="underline">https://verixa.vercel.app/role-selection</a>
           </div>
           <ol className="list-decimal ml-5 space-y-1">
-            <li>Connect your wallet.</li>
-            <li>Select your role and provide basic details.</li>
-            <li>Set a platform password (stored securely; wallet address + password form your credentials).</li>
-            <li>Confirm registration and proceed to login.</li>
+            <li>Open Role Selection and choose your role.</li>
+            <li>You will be routed to <span className="font-mono">/register/&lt;role&gt;</span> (e.g., <span className="font-mono">/register/validator</span>).</li>
+            <li>Connect your wallet and switch to Polygon Amoy within the form if prompted.</li>
+            <li>Fill in details and set your platform password.</li>
+            <li>Submit to complete registration.</li>
           </ol>
-          <div className="aspect-video w-full rounded-md border border-dashed border-border flex items-center justify-center text-xs">
-            Screenshot placeholder: Role selection
-          </div>
         </CardContent>
       </Card>
 
@@ -72,9 +65,6 @@ export function RegistrationLoginSection() {
             <li>Insurance → Insurance Dashboard</li>
             <li>Validator → Validator Dashboard</li>
           </ul>
-          <div className="aspect-video w-full rounded-md border border-dashed border-border flex items-center justify-center text-xs">
-            Screenshot placeholder: Login page
-          </div>
         </CardContent>
       </Card>
 

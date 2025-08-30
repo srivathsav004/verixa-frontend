@@ -7,7 +7,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 export function GettingStartedSection() {
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">🚀 Getting Started</h2>
+      <h2 className="text-2xl font-bold">Getting Started</h2>
 
       <Card>
         <CardHeader>
