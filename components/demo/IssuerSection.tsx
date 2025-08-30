@@ -33,7 +33,7 @@ export function IssuerSection() {
                 <li>Reports issued from this platform are treated as trusted and verifiable by insurers.</li>
                 <li>Patients can file claims immediately using these reports — no third‑party attestation required.</li>
                 <li><strong>Single‑use validity:</strong> once a report is used successfully in a claim, it becomes locked and cannot be reused for another claim.</li>
-                <li>Issuer actions are performed from the dashboard’s “Issue Reports” view, powered by <span className="font-medium text-foreground">components/issuer/issue-new-document.tsx</span>.</li>
+                <li>Issuer actions are performed from the dashboard’s “Issue Reports” view.</li>
               </ul>
               <div className="mt-3 rounded-md border border-dashed border-border p-4 text-xs">
                 Screenshot placeholder: Issuer Dashboard overview and quick stats
