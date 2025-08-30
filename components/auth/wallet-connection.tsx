@@ -33,8 +33,8 @@ export function WalletConnection({ onWalletConnected, onBack, onComplete }: Wall
     chainId: "0x13882", // 80002 in hex
     chainName: "Polygon Amoy Testnet",
     nativeCurrency: {
-      name: "MATIC",
-      symbol: "MATIC",
+      name: "POL",
+      symbol: "POL",
       decimals: 18,
     },
     rpcUrls: ["https://rpc-amoy.polygon.technology"],
