@@ -120,6 +120,9 @@
   body {
     @apply bg-background text-foreground;
   }
+  html {
+    scroll-behavior: smooth;
+  }
   /* Scrollbar styling */
   * {
     scrollbar-color: color-mix(in oklab, var(--foreground) 20%, transparent) transparent;
