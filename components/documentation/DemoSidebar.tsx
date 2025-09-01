@@ -107,9 +107,9 @@ export function DemoSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <div className="mt-3 px-2">
+{/*         <div className="mt-3 px-2">
           <Badge variant="outline" className="w-full justify-center">Dark Theme</Badge>
-        </div>
+        </div> */}
       </div>
     </ScrollArea>
   );
