@@ -74,7 +74,7 @@ export function RegistrationLoginSection() {
           <CardDescription>Where fees may apply</CardDescription>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground">
-          Some actions (mainly for Insurance and Validators) can trigger on-chain transactions. Ensure you have test MATIC/POL on Amoy for gas. The platform routes all blockchain operations to Polygon Amoy Testnet (80002).
+          Some actions (mainly for Insurance and Validators) can trigger on-chain transactions. Ensure you have testnet POL on Amoy for gas. The platform routes all blockchain operations to Polygon Amoy Testnet (80002).
         </CardContent>
       </Card>
 
