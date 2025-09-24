@@ -3,6 +3,7 @@ import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
 import './globals.css'
 import { Toaster } from '@/components/ui/toaster'
+import { Analytics } from '@vercel/analytics/next'
 
 export const metadata: Metadata = {
   title: 'Verixa',
@@ -63,6 +64,7 @@ html {
       <body className="min-h-screen bg-background text-foreground">
         {children}
         <Toaster />
+        <Analytics />
       </body>
     </html>
   )
