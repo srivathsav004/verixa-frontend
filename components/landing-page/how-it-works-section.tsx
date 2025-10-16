@@ -33,6 +33,21 @@ export function HowItWorksSection() {
     },
   ]
 
+  const bgActiveMap: Record<string, string> = {
+    blue: "bg-blue-900/30 border-blue-500",
+    purple: "bg-purple-900/30 border-purple-500",
+  }
+
+  const btnActiveMap: Record<string, string> = {
+    blue: "border-blue-500 text-blue-400",
+    purple: "border-purple-500 text-purple-400",
+  }
+
+  const stepDotMap: Record<string, string> = {
+    blue: "bg-blue-500",
+    purple: "bg-purple-500",
+  }
+
   return (
     <section className="py-24 px-6 relative bg-gradient-to-b from-gray-900 to-black">
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f2937_1px,transparent_1px),linear-gradient(to_bottom,#1f2937_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
@@ -65,7 +80,7 @@ export function HowItWorksSection() {
               <Card
                 className={`p-8 h-full cursor-pointer transition-all duration-300 ${
                   selectedPath === index
-                    ? `bg-${path.color}-900/30 border-${path.color}-500`
+                    ? bgActiveMap[path.color]
                     : "bg-gray-900/50 border-gray-800 hover:bg-gray-900/70"
                 }`}
                 onClick={() => setSelectedPath(selectedPath === index ? null : index)}
@@ -76,9 +91,7 @@ export function HowItWorksSection() {
                 <Button
                   variant="outline"
                   className={`mb-6 ${
-                    selectedPath === index
-                      ? `border-${path.color}-500 text-${path.color}-400`
-                      : "border-gray-600 text-gray-400"
+                    selectedPath === index ? btnActiveMap[path.color] : "border-gray-600 text-gray-400"
                   }`}
                 >
                   {selectedPath === index ? "Hide Details" : "View Process"}
@@ -101,7 +114,7 @@ export function HowItWorksSection() {
                           className="flex items-start space-x-3"
                         >
                           <div
-                            className={`w-6 h-6 rounded-full bg-${path.color}-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0 mt-0.5`}
+                            className={`w-6 h-6 rounded-full ${stepDotMap[path.color]} flex items-center justify-center text-white text-sm font-bold flex-shrink-0 mt-0.5`}
                           >
                             {stepIndex + 1}
                           </div>
@@ -117,13 +130,13 @@ export function HowItWorksSection() {
         </div>
 
         {/* Marquee-style animation showing the flow */}
-        <motion.div
+        {/* <motion.div
           className="relative overflow-hidden bg-gradient-to-r from-gray-900 to-gray-800 rounded-lg p-8"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
           viewport={{ once: true }}
-        >
+          >
           <h3 className="text-2xl font-bold text-center mb-8 text-white">Verification Flow</h3>
 
           <div className="flex items-center justify-between space-x-4 overflow-x-auto">
@@ -153,8 +166,9 @@ export function HowItWorksSection() {
               </motion.div>
             ))}
           </div>
-        </motion.div>
+        </motion.div> */}
       </div>
     </section>
   )
 }
+

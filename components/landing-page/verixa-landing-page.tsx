@@ -15,7 +15,7 @@ export function VerixaLandingPage() {
       <SolutionSection />
       <RolesSection />
       <HowItWorksSection />
-      <StatsSection />
+      {/* <StatsSection /> */}
       <FooterSection />
     </div>
   )

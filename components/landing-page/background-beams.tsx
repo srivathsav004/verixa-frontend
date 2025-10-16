@@ -30,11 +30,11 @@ export function BackgroundBeams() {
 
   if (beams.length === 0) {
     // Return empty div during SSR and initial render
-    return <div className="absolute inset-0 overflow-hidden" />
+    return <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" />
   }
 
   return (
-    <div className="absolute inset-0 overflow-hidden">
+    <div className="pointer-events-none absolute inset-0 overflow-hidden z-0">
       {/* Animated beams */}
       {beams.map((beam) => (
         <motion.div
@@ -62,7 +62,7 @@ export function BackgroundBeams() {
       ))}
 
       {/* Grid pattern */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#0a0a0a_1px,transparent_1px),linear-gradient(to_bottom,#0a0a0a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.12)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.12)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_70%_60%_at_50%_0%,#000_60%,transparent_130%)]" />
     </div>
   )
 }

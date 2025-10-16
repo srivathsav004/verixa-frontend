@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion"
 import { Card } from "@/components/ui/card"
+import { FileText, Bot, CheckCircle2 } from "lucide-react"
 
 export function SolutionSection() {
   const steps = [
@@ -9,19 +10,19 @@ export function SolutionSection() {
       number: "01",
       title: "Upload Document",
       description: "Medical professionals upload reports directly to the blockchain",
-      icon: "📄",
+      icon: <FileText className="w-12 h-12 text-blue-400" aria-hidden />,
     },
     {
       number: "02",
       title: "AI Analysis + Blockchain Verification",
       description: "Advanced AI analyzes document authenticity while blockchain ensures immutability",
-      icon: "🤖",
+      icon: <Bot className="w-12 h-12 text-purple-400" aria-hidden />,
     },
     {
       number: "03",
       title: "Get Trust Score in Minutes",
       description: "Receive comprehensive verification results with confidence scores instantly",
-      icon: "✅",
+      icon: <CheckCircle2 className="w-12 h-12 text-green-400" aria-hidden />,
     },
   ]
 
@@ -60,7 +61,7 @@ export function SolutionSection() {
                   {step.number}
                 </div>
 
-                <div className="text-5xl mb-6 group-hover:scale-110 transition-transform duration-300">{step.icon}</div>
+                <div className="mb-6 group-hover:scale-110 transition-transform duration-300">{step.icon}</div>
 
                 <h3 className="text-2xl font-semibold mb-4 text-white">{step.title}</h3>
 
@@ -77,3 +78,4 @@ export function SolutionSection() {
     </section>
   )
 }
+
