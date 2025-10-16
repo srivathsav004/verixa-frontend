@@ -20,11 +20,11 @@ export function PatientSection() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="w-full px-1 overflow-x-auto whitespace-nowrap [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:w-auto sm:px-0 sm:overflow-visible sm:whitespace-normal">
-          <TabsTrigger className="flex-none" value="reports">Medical Reports</TabsTrigger>
-          <TabsTrigger className="flex-none" value="submit">Submit Claims</TabsTrigger>
-          <TabsTrigger className="flex-none" value="status">Claim Status</TabsTrigger>
-          <TabsTrigger className="flex-none" value="history">Claim History</TabsTrigger>
+        <TabsList className="max-sm:w-full max-sm:px-1 max-sm:overflow-x-auto max-sm:whitespace-nowrap [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <TabsTrigger className="max-sm:flex-none" value="reports">Medical Reports</TabsTrigger>
+          <TabsTrigger className="max-sm:flex-none" value="submit">Submit Claims</TabsTrigger>
+          <TabsTrigger className="max-sm:flex-none" value="status">Claim Status</TabsTrigger>
+          <TabsTrigger className="max-sm:flex-none" value="history">Claim History</TabsTrigger>
         </TabsList>
 
         <TabsContent value="reports">

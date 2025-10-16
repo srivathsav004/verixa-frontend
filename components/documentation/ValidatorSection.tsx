@@ -16,12 +16,12 @@ export function ValidatorSection() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="w-full overflow-x-auto whitespace-nowrap no-scrollbar [-ms-overflow-style:none] [scrollbar-width:none]">
-          <TabsTrigger className="flex-none" value="dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger className="flex-none" value="tasks">Available Queue</TabsTrigger>
-          <TabsTrigger className="flex-none" value="active">Active Validations</TabsTrigger>
-          <TabsTrigger className="flex-none" value="rewards">Rewards</TabsTrigger>
-          <TabsTrigger className="flex-none" value="future">Future</TabsTrigger>
+        <TabsList className="max-sm:w-full max-sm:px-1 max-sm:overflow-x-auto max-sm:whitespace-nowrap [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <TabsTrigger className="max-sm:flex-none" value="dashboard">Dashboard</TabsTrigger>
+          <TabsTrigger className="max-sm:flex-none" value="tasks">Available Queue</TabsTrigger>
+          <TabsTrigger className="max-sm:flex-none" value="active">Active Validations</TabsTrigger>
+          <TabsTrigger className="max-sm:flex-none" value="rewards">Rewards</TabsTrigger>
+          <TabsTrigger className="max-sm:flex-none" value="future">Future</TabsTrigger>
         </TabsList>
 
         <TabsContent value="dashboard">
