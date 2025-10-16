@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion"
 import { Card } from "@/components/ui/card"
+import { Timer, ShieldAlert, Hourglass } from "lucide-react"
 
 export function ProblemSection() {
   return (
@@ -30,17 +31,17 @@ export function ProblemSection() {
             {
               title: "Manual Verification",
               description: "Insurance companies spend weeks manually verifying medical documents",
-              icon: "⏰",
+              icon: <Timer className="w-10 h-10 text-red-400" aria-hidden />,
             },
             {
               title: "Document Fraud",
               description: "Billions lost annually due to fraudulent medical claims and reports",
-              icon: "🚨",
+              icon: <ShieldAlert className="w-10 h-10 text-orange-400" aria-hidden />,
             },
             {
               title: "Patient Delays",
               description: "Patients wait unnecessarily long for claim approvals and treatments",
-              icon: "⏳",
+              icon: <Hourglass className="w-10 h-10 text-yellow-400" aria-hidden />,
             },
           ].map((problem, index) => (
             <motion.div
@@ -51,7 +52,7 @@ export function ProblemSection() {
               viewport={{ once: true }}
             >
               <Card className="bg-gray-900/50 border-gray-800 p-8 h-full hover:bg-gray-900/70 transition-colors group">
-                <div className="text-4xl mb-4 group-hover:scale-110 transition-transform">{problem.icon}</div>
+                <div className="mb-4 group-hover:scale-110 transition-transform">{problem.icon}</div>
                 <h3 className="text-2xl font-semibold mb-4 text-white">{problem.title}</h3>
                 <p className="text-gray-400 leading-relaxed">{problem.description}</p>
               </Card>
@@ -62,3 +63,4 @@ export function ProblemSection() {
     </section>
   )
 }
+
