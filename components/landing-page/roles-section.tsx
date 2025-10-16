@@ -3,6 +3,7 @@
 import { motion } from "framer-motion"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Building2, User, ShieldCheck } from "lucide-react"
 
 export function RolesSection() {
   const roles = [
@@ -10,21 +11,21 @@ export function RolesSection() {
       title: "Medical Issuers",
       description: "Register, upload templates, issue verified reports",
       features: ["Digital signature integration", "Template management", "Batch processing", "Audit trails"],
-      icon: "🏥",
+      icon: <Building2 className="w-12 h-12 text-blue-400" aria-hidden />,
       gradient: "from-blue-500 to-cyan-500",
     },
     {
       title: "Patients",
       description: "Receive reports, store securely, share instantly",
       features: ["Secure document wallet", "One-click sharing", "Privacy controls", "Mobile access"],
-      icon: "👤",
+      icon: <User className="w-12 h-12 text-green-400" aria-hidden />,
       gradient: "from-green-500 to-emerald-500",
     },
     {
       title: "Insurance Companies",
       description: "Verify reports, get trust scores, reduce fraud",
       features: ["Instant verification", "Fraud detection", "Risk assessment", "API integration"],
-      icon: "🛡️",
+      icon: <ShieldCheck className="w-12 h-12 text-purple-400" aria-hidden />,
       gradient: "from-purple-500 to-pink-500",
     },
   ]
@@ -71,7 +72,7 @@ export function RolesSection() {
                 />
 
                 <div className="relative z-10">
-                  <div className="text-6xl mb-6 group-hover:scale-110 transition-transform duration-300">
+                  <div className="mb-6 group-hover:scale-110 transition-transform duration-300">
                     {role.icon}
                   </div>
 
@@ -102,3 +103,4 @@ export function RolesSection() {
     </section>
   )
 }
+
