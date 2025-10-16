@@ -10,12 +10,12 @@ import { Sparkles, ShieldCheck, Timer, Coins } from "lucide-react";
 export function OverviewSection() {
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Verixa: The Ledger Never Lies</h2>
-          <p className="text-muted-foreground">Eliminating medical document fraud with blockchain + AI + human consensus.</p>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="min-w-0">
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight leading-snug">Verixa: The Ledger Never Lies</h2>
+          <p className="text-sm sm:text-base text-muted-foreground">Eliminating medical document fraud with blockchain + AI + human consensus.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
           <Badge variant="secondary" className="gap-1"><Timer className="size-3" /> Instant</Badge>
           <Badge variant="secondary" className="gap-1"><ShieldCheck className="size-3" /> Secure</Badge>
           <Badge variant="secondary" className="gap-1"><Coins className="size-3" /> Cost‑efficient</Badge>

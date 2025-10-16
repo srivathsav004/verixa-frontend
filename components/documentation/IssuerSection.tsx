@@ -10,17 +10,19 @@ export function IssuerSection() {
   const [activeTab, setActiveTab] = useState<string>("overview");
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <h2 className="text-2xl font-bold">🏥 Medical Issuer</h2>
-        <Badge variant="outline">Auto‑Verified Reports</Badge>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
+        <h2 className="text-xl sm:text-2xl font-bold">🏥 Medical Issuer</h2>
+        <div className="flex flex-wrap gap-2">
+          <Badge variant="outline">Auto‑Verified Reports</Badge>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="features">Features</TabsTrigger>
-          <TabsTrigger value="workflow">Workflow</TabsTrigger>
-          <TabsTrigger value="future">Future</TabsTrigger>
+        <TabsList className="w-full px-1 overflow-x-auto whitespace-nowrap [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:w-auto sm:px-0 sm:overflow-visible sm:whitespace-normal">
+          <TabsTrigger className="flex-none" value="overview">Overview</TabsTrigger>
+          <TabsTrigger className="flex-none" value="features">Features</TabsTrigger>
+          <TabsTrigger className="flex-none" value="workflow">Workflow</TabsTrigger>
+          <TabsTrigger className="flex-none" value="future">Future</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview">

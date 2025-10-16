@@ -17,13 +17,13 @@ export function InsuranceSection() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="flex flex-wrap">
-          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="claims">Claims</TabsTrigger>
-          <TabsTrigger value="ai">AI Verification</TabsTrigger>
-          <TabsTrigger value="validator">Validator Layer</TabsTrigger>
-          <TabsTrigger value="fraud">Fraud Alerts</TabsTrigger>
-          <TabsTrigger value="future">Future</TabsTrigger>
+        <TabsList className="w-full px-1 overflow-x-auto whitespace-nowrap [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:w-auto sm:px-0 sm:overflow-visible sm:whitespace-normal">
+          <TabsTrigger className="flex-none" value="dashboard">Dashboard</TabsTrigger>
+          <TabsTrigger className="flex-none" value="claims">Claims</TabsTrigger>
+          <TabsTrigger className="flex-none" value="ai">AI Verification</TabsTrigger>
+          <TabsTrigger className="flex-none" value="validator">Validator Layer</TabsTrigger>
+          <TabsTrigger className="flex-none" value="fraud">Fraud Alerts</TabsTrigger>
+          <TabsTrigger className="flex-none" value="future">Future</TabsTrigger>
         </TabsList>
 
         <TabsContent value="dashboard">

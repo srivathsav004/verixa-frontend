@@ -12,17 +12,19 @@ export function PatientSection() {
   const [activeTab, setActiveTab] = useState<string>("reports");
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <h2 className="text-2xl font-bold">👤 Patient</h2>
-        <Badge variant="outline">Claims & Records</Badge>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
+        <h2 className="text-xl sm:text-2xl font-bold">👤 Patient</h2>
+        <div className="flex flex-wrap gap-2">
+          <Badge variant="outline">Claims & Records</Badge>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="reports">Medical Reports</TabsTrigger>
-          <TabsTrigger value="submit">Submit Claims</TabsTrigger>
-          <TabsTrigger value="status">Claim Status</TabsTrigger>
-          <TabsTrigger value="history">Claim History</TabsTrigger>
+        <TabsList className="w-full px-1 overflow-x-auto whitespace-nowrap [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:w-auto sm:px-0 sm:overflow-visible sm:whitespace-normal">
+          <TabsTrigger className="flex-none" value="reports">Medical Reports</TabsTrigger>
+          <TabsTrigger className="flex-none" value="submit">Submit Claims</TabsTrigger>
+          <TabsTrigger className="flex-none" value="status">Claim Status</TabsTrigger>
+          <TabsTrigger className="flex-none" value="history">Claim History</TabsTrigger>
         </TabsList>
 
         <TabsContent value="reports">

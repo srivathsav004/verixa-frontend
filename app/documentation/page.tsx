@@ -56,54 +56,57 @@ export default function DemoPage() {
 
         <SidebarInset className="flex-1 min-w-0 w-full overflow-x-hidden">
           <header className="sticky top-0 z-10 border-b border-border bg-background/60 backdrop-blur supports-[backdrop-filter]:bg-background/40">
-            <div className="flex items-center gap-3 pl-4 pr-0 py-3">
+            <div className="flex items-center gap-3 px-3 sm:px-4 py-3 w-full">
               <SidebarTrigger className="text-foreground/80" />
               <div className="ml-1 text-sm text-muted-foreground">Documentation</div>
             </div>
           </header>
 
-          <main className="pl-4 pr-0 py-6 w-full max-w-full space-y-16">
-            <section id="overview" className="scroll-mt-24">
-              <OverviewSection />
-            </section>
-            <Separator />
+          <main className="px-3 sm:px-6 py-6 w-full max-w-full">
+            <div className="mx-auto w-full max-w-[48rem] md:max-w-4xl lg:max-w-5xl space-y-12 sm:space-y-16">
+              <section id="overview" className="scroll-mt-20 sm:scroll-mt-24">
+                <OverviewSection />
+              </section>
+              <Separator />
 
-            <section id="roles-issuer" className="scroll-mt-24">
-              <IssuerSection />
-            </section>
-            <Separator />
+              <section id="roles-issuer" className="scroll-mt-20 sm:scroll-mt-24">
+                <IssuerSection />
+              </section>
+              <Separator />
 
-            <section id="roles-patient" className="scroll-mt-24">
-              <PatientSection />
-            </section>
-            <Separator />
+              <section id="roles-patient" className="scroll-mt-20 sm:scroll-mt-24">
+                <PatientSection />
+              </section>
+              <Separator />
 
-            <section id="roles-insurance" className="scroll-mt-24">
-              <InsuranceSection />
-            </section>
-            <Separator />
+              <section id="roles-insurance" className="scroll-mt-20 sm:scroll-mt-24">
+                <InsuranceSection />
+              </section>
+              <Separator />
 
-            <section id="roles-validator" className="scroll-mt-24">
-              <ValidatorSection />
-            </section>
-            <Separator />
+              <section id="roles-validator" className="scroll-mt-20 sm:scroll-mt-24">
+                <ValidatorSection />
+              </section>
+              <Separator />
 
-            <section id="technical" className="scroll-mt-24">
-              <TechnicalSection />
-            </section>
-            <Separator />
+              <section id="technical" className="scroll-mt-20 sm:scroll-mt-24">
+                <TechnicalSection />
+              </section>
+              <Separator />
 
-            <section id="registration-login" className="scroll-mt-24">
-              <RegistrationLoginSection />
-            </section>
-            <Separator />
+              <section id="registration-login" className="scroll-mt-20 sm:scroll-mt-24">
+                <RegistrationLoginSection />
+              </section>
+              <Separator />
 
-            <section id="getting-started" className="scroll-mt-24">
-              <GettingStartedSection />
-            </section>
+              <section id="getting-started" className="scroll-mt-20 sm:scroll-mt-24">
+                <GettingStartedSection />
+              </section>
+            </div>
           </main>
         </SidebarInset>
       </div>
     </SidebarProvider>
   );
 }
+
