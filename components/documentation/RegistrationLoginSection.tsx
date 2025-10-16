@@ -8,9 +8,11 @@ import { Badge } from "@/components/ui/badge";
 export function RegistrationLoginSection() {
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <h2 className="text-2xl font-bold">🧭 Registration & Login</h2>
-        <Badge variant="outline">Polygon Amoy · Chain ID 80002</Badge>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
+        <h2 className="text-xl sm:text-2xl font-bold">🧭 Registration & Login</h2>
+        <div className="flex flex-wrap gap-2">
+          <Badge variant="outline">Polygon Amoy · Chain ID 80002</Badge>
+        </div>
       </div>
 
       <Card>
