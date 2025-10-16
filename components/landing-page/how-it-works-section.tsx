@@ -117,13 +117,13 @@ export function HowItWorksSection() {
         </div>
 
         {/* Marquee-style animation showing the flow */}
-        <motion.div
+        {/* <motion.div
           className="relative overflow-hidden bg-gradient-to-r from-gray-900 to-gray-800 rounded-lg p-8"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
           viewport={{ once: true }}
-        >
+          >
           <h3 className="text-2xl font-bold text-center mb-8 text-white">Verification Flow</h3>
 
           <div className="flex items-center justify-between space-x-4 overflow-x-auto">
@@ -153,7 +153,7 @@ export function HowItWorksSection() {
               </motion.div>
             ))}
           </div>
-        </motion.div>
+        </motion.div> */}
       </div>
     </section>
   )
